@@ -1,0 +1,142 @@
+# HRConnector
+
+A white-label HR workspace for Romanian companies. Next.js App Router, strict TypeScript, Tailwind CSS, and Supabase Auth/PostgreSQL. Romanian is the default interface language; English is available from the language switch.
+
+## Implemented scope
+
+- Email/password signup, confirmation, sign-in, sign-out, and password recovery.
+- Organisation creation in one database transaction; organisation switching and settings.
+- Owner, HR manager, manager, and employee access enforced in server actions and PostgreSQL RLS.
+- A separately provisioned platform administrator role for organisation metadata. It never bypasses tenant HR policies.
+- Dashboard with live counts, departments, recent employees, and audit activity.
+- Employee directory with search, filters and pagination; creation, editing, profiles, and manager assignment.
+- Contract creation/editing, statuses, fixed/indefinite terms, salary storage, and the database relationship for future addenda.
+- Owner-managed access for existing confirmed accounts, including linking a user to an employee record.
+- Automatic audit events for organisation, membership, employee, contract, and salary changes.
+
+Leave, attendance, benefits, documents, REGES, onboarding checklists, and external provider integrations are later phases. Navigation labels explicitly identify planned modules. There is no payroll calculation, provider submission, mock integration, or production demo dataset.
+
+## Local development
+
+Requires Node.js 22.18+ (for the TypeScript test runner; Node 24 LTS is recommended) and npm.
+
+```powershell
+npm ci
+Copy-Item .env.example .env.local
+```
+
+Set these values in `.env.local`:
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_BRAND_NAME=HRConnector
+```
+
+The app uses only the publishable key with the signed-in user's JWT. It does not require a service-role key. `.env.local` is ignored by Git.
+
+```powershell
+npx supabase login
+npx supabase link --project-ref your-project-ref
+npx supabase db push --linked
+npx supabase config diff
+# Review declared differences before applying configuration.
+npx supabase config push
+npm run dev
+```
+
+Open http://localhost:3000. Local 127.0.0.1 requests redirect to the configured localhost origin to keep confirmation cookies consistent. Without Supabase environment settings the app shows a setup screen.
+
+Alternatively, run `npx supabase start` with Docker for a fully local backend. Apply migrations with `npx supabase db reset` **only to the disposable local database**. Use its URL/key from `npx supabase status`; local confirmation emails appear in the local SMTP inbox at http://localhost:54324.
+
+## First account and access
+
+1. Register through `/register`, confirm the email, and sign in.
+2. Create the organisation. The creating account becomes its owner atomically.
+3. Add an employee from the directory. Add a contract from that employee's Contract tab.
+4. Colleagues register and confirm their own accounts. An owner can grant access by email under **Echipă și acces**, choose the role, and link the employee record. Re-entering an existing member's email updates their role. No invitation emails are sent by this flow.
+5. A manager sees only employees assigned to their account. A linked employee sees only their own profile/contracts. Owners and HR manage all HR records inside their organisation. A member's role in one organisation never applies to another.
+
+The final owner cannot be demoted, including under concurrent requests. Membership writes are available only through the authorised database function; the frontend cannot promote itself or change employee account links directly. Account removal and invitations are not part of this initial release.
+
+To provision the platform owner, run the following **once from a trusted SQL/admin session**, substituting the verified owner's email. It cannot be called from the app's public key:
+
+```sql
+insert into private.platform_admins (user_id)
+select id from auth.users
+where lower(email) = lower('YOUR_CONFIRMED_EMAIL')
+  and email_confirmed_at is not null
+on conflict (user_id) do nothing;
+```
+
+The platform admin page appears after the account also has an organisation membership. Platform administrators see organisation metadata only. No public signup or editable user metadata can grant this role.
+
+## Auth email configuration
+
+In Supabase Authentication → URL Configuration, use the exact application origin as the Site URL. Allow:
+
+- `http://localhost:3000/auth/confirm`
+- `http://localhost:3000/auth/confirm?next=/update-password`
+- `http://localhost:3000/update-password`
+- The equivalent paths under the production Vercel/custom domain.
+
+The default Supabase confirmation email uses its verification URL, then redirects with a PKCE code. Confirm on the same browser where signup started. For confirmations across devices, the confirmation template can instead use `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email`. The recovery template can use `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/update-password`. The callback accepts only known verification types and internal destinations.
+
+Configure your own SMTP provider before inviting real users; the built-in email service has delivery and rate limits. Keep email confirmation enabled.
+
+## White-label configuration
+
+- `src/lib/brand.ts`: product name, monogram, and optional logo asset. The name can be overridden with `NEXT_PUBLIC_BRAND_NAME`.
+- `src/app/globals.css`: shared `--brand`, `--brand-hover`, `--brand-soft`, surface, border, and typography tokens.
+- `src/app/icon.svg`: favicon; replace alongside the product logo.
+- `src/lib/i18n.ts`: Romanian and English UI dictionaries and display formatting.
+
+Branding is deployment-wide in this MVP. Each tenant has its own organisation name. Per-tenant logo/theme/domain settings can be added later without changing HR records.
+
+## Project structure
+
+```text
+src/app/(auth)/             Authentication screens
+src/app/(workspace)/        Protected dashboard, employees, contracts and settings
+src/app/actions.ts          Validated and authorised server mutations
+src/app/auth/confirm/       Email confirmation and recovery callbacks
+src/components/            Shared forms, shell and interface elements
+src/lib/auth.ts             Request-scoped session and organisation checks
+src/lib/supabase/           Server-side Supabase client and configuration
+src/lib/validation.ts       Runtime input validation
+src/lib/database.types.ts   Database TypeScript contract
+src/lib/i18n.ts             Localised interface strings
+supabase/migrations/       Versioned SQL schema, permissions, RLS and functions
+tests/                     PostgreSQL isolation and input validation checks
+docs/                      Architecture and phased roadmap
+```
+
+## Verification
+
+```powershell
+npm test
+npm run lint
+npm run build
+npx supabase db lint --linked --level warning
+npx supabase db query --linked --file tests/live-rls-smoke.sql
+```
+
+The test suite runs the real migration in an embedded PostgreSQL engine (PGlite) with realistic Supabase auth roles. It checks cross-tenant reads/writes, foreign-key tenant constraints, salary access, self-promotion, account linking, immutable audit records, final-owner protection, and platform boundaries. The live SQL smoke check uses temporary records inside a transaction and rolls everything back, including auth users and audit rows.
+
+## Vercel deployment
+
+1. Create the GitHub repository and push this project.
+2. Import it into Vercel using its Next.js preset.
+3. Set the four environment variables above in Vercel. Use the production HTTPS origin for `NEXT_PUBLIC_SITE_URL`.
+4. Apply pending database migrations using an authorised CLI session. Migrations are intentionally not run from the browser or automatically during the Vercel build.
+5. Update Supabase's Site URL and allowed redirects for the production origin. Inspect `supabase config diff` before any later configuration push so local URLs never overwrite production settings.
+6. Deploy, create a confirmed owner account, and verify sign-in, organisation creation, employee and contract flows.
+
+GitHub and Vercel credentials are not stored in the source. Standard Next.js server rendering and server actions work directly on Vercel; no alternative hosting runtime is required.
+
+## References
+
+- [Next.js server actions and forms](https://nextjs.org/docs/app/guides/forms)
+- [Supabase server-side authentication](https://supabase.com/docs/guides/auth/server-side/creating-a-client)
+- [Supabase Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
