@@ -87,3 +87,27 @@ export const registerSchema = z.object({
 });
 export const passwordSchema = z.string().min(10).max(200);
 export const idSchema = z.uuid();
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .transform((value) => value || null);
+export const platformOrganisationSchema = organisationSchema.extend({
+  registration_number: optionalText(80),
+  registered_address: optionalText(300),
+  city: optionalText(100),
+  county: optionalText(100),
+  contact_name: optionalText(160),
+  contact_email: z
+    .union([z.email().max(254), z.literal("")])
+    .transform((value) => value.toLowerCase() || null),
+  contact_phone: optionalText(30),
+});
+export const organisationStatusSchema = z.object({
+  id: idSchema,
+  version: z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  status: z.enum(["active", "suspended", "blocked"]),
+  reason: z.string().trim().min(5).max(500),
+  confirmed: z.literal("yes"),
+});

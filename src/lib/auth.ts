@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { createClient } from "./supabase/server";
 import { isConfigured } from "./supabase/config";
 import { canManage } from "./types";
@@ -28,10 +28,14 @@ export const getMemberships = cache(async () => {
     );
   return data;
 });
-export const requireOrganisation = cache(async () => {
+export const getOrganisationContext = cache(async () => {
   const { supabase, user } = await requireUser();
   const memberships = await getMemberships();
-  if (!memberships.length) redirect("/onboarding");
+  if (!memberships.length) {
+    const admin = await supabase.rpc("is_platform_admin");
+    if (admin.error) throw new Error("Platform access could not be checked.");
+    redirect(admin.data ? "/platform" : "/onboarding");
+  }
   const selected = (await cookies()).get("hr-organisation")?.value;
   const membership =
     memberships.find((m) => m.organisation_id === selected) ?? memberships[0];
@@ -44,8 +48,23 @@ export const requireOrganisation = cache(async () => {
     throw new Error("Organisation could not be loaded.");
   return { supabase, user, organisation, membership, memberships };
 });
-export async function requireHR() {
+export const requireOrganisation = cache(async () => {
+  const context = await getOrganisationContext();
+  if (context.organisation.status === "blocked")
+    redirect("/organisation-access");
+  return context;
+});
+export const requirePlatformAdmin = cache(async () => {
+  const context = await requireUser();
+  const { data, error } = await context.supabase.rpc("is_platform_admin");
+  if (error) throw new Error("Platform access could not be checked.");
+  if (!data) notFound();
+  return context;
+});
+export async function requireHR(writable = false) {
   const context = await requireOrganisation();
   if (!canManage(context.membership.role)) redirect("/dashboard");
+  if (writable && context.organisation.status !== "active")
+    redirect("/dashboard");
   return context;
 }

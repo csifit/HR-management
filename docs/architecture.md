@@ -4,14 +4,14 @@ One Next.js application and one Supabase PostgreSQL database. No microservices, 
 
 ## Data model
 
-| Entity                    | Ownership and purpose                                                                          |
-| ------------------------- | ---------------------------------------------------------------------------------------------- |
-| `organisations`           | Tenant identity, name, CUI, creator, timestamps                                                |
-| `organisation_users`      | Composite organisation/user membership; role and account display details                       |
-| `employees`               | Organisation-owned directory and employment basics; optional linked account and manager        |
-| `employment_contracts`    | Organisation and employee-owned contract details, salary, status, and optional parent contract |
-| `audit_log`               | Append-only organisation-owned action history written by trusted triggers/functions            |
-| `private.platform_admins` | Operator-provisioned global platform identities, with no implicit HR access                    |
+| Entity                    | Ownership and purpose                                                                           |
+| ------------------------- | ----------------------------------------------------------------------------------------------- |
+| `organisations`           | Tenant identity, onboarding/contact details, access status/reason, version, creator, timestamps |
+| `organisation_users`      | Composite organisation/user membership; role and account display details                        |
+| `employees`               | Organisation-owned directory and employment basics; optional linked account and manager         |
+| `employment_contracts`    | Organisation and employee-owned contract details, salary, status, and optional parent contract  |
+| `audit_log`               | Append-only organisation-owned action history written by trusted triggers/functions             |
+| `private.platform_admins` | Operator-provisioned global platform identities, with no implicit HR access                     |
 
 Employee and contract IDs are globally unique, but references include `organisation_id` so cross-tenant employee, manager, account, and parent-contract links cannot be stored. A parent contract must belong to the same employee as its addendum. Organisation IDs and audit authors cannot be changed by authenticated API callers.
 
@@ -29,15 +29,23 @@ Supabase server clients are created per request and use the public publishable k
 
 ## Roles
 
-| Role           | Employee directory                       | Contracts/salary                     | Organisation/access                              |
-| -------------- | ---------------------------------------- | ------------------------------------ | ------------------------------------------------ |
-| Owner          | All tenant employees; create/edit        | All tenant contracts; create/edit    | Edit organisation; grant/change membership roles |
-| HR manager     | All tenant employees; create/edit        | All tenant contracts; create/edit    | Read memberships; no role grants                 |
-| Manager        | Assigned employees and own linked record | Own linked employee's contracts only | Own membership and organisation metadata         |
-| Employee       | Own linked record                        | Own contracts/salary, read-only      | Own membership and organisation metadata         |
-| Platform admin | Requires a tenant role                   | Requires a tenant role               | Cross-tenant organisation metadata only          |
+| Role           | Employee directory                       | Contracts/salary                        | Organisation/access                              |
+| -------------- | ---------------------------------------- | --------------------------------------- | ------------------------------------------------ |
+| Owner          | All tenant employees; create/edit        | All tenant contracts; create/edit       | Edit organisation; grant/change membership roles |
+| HR manager     | All tenant employees; create/edit        | All tenant contracts; create/edit       | Read memberships; no role grants                 |
+| Manager        | Assigned employees and own linked record | Own linked employee's contracts only    | Own membership and organisation metadata         |
+| Employee       | Own linked record                        | Own contracts/salary, read-only         | Own membership and organisation metadata         |
+| Platform admin | Requires an active/readable tenant role  | Requires an active/readable tenant role | Cross-tenant onboarding and access management    |
 
 `create_organisation` atomically creates the tenant, its owner, and an audit event. Membership changes lock the organisation row, require ownership, preserve the final owner, and only link accounts to employees inside the same tenant. SQL helper functions have fixed empty search paths and explicit execute grants. The `private` schema is excluded from the Data API.
+
+## Platform administration and access states
+
+`/platform` has a separate layout and checks `is_platform_admin` independently of organisation selection. Its RPCs verify operator-provisioned membership in `private.platform_admins` on every call. They expose company metadata, aggregate employee/account counts, owner emails and organisation-only audit events. They do not expose employee records, contract salaries or general tenant audit data.
+
+`platform_save_organisation` accepts a whitelist of company fields. Creation also assigns an existing confirmed account as owner atomically. `platform_set_organisation_status` requires a reason; updates take an organisation row lock and check the submitted version. All organisation updates increment the version, including tenant-owner edits. Reasons are intentionally visible to tenant members; no private support notes or integration secrets belong in these fields.
+
+Suspension preserves role-scoped reads while restrictive write policies and triggers prevent employee, contract and membership mutations. Blocking also closes read policies and security-definer directory RPCs. Own membership/organisation metadata stays readable so members can see the restriction and switch workspaces. Employee/contract statuses are untouched. Write triggers take a shared organisation lock, so status changes wait for existing writes and subsequent writes see the restriction. Platform company metadata edits and restoration are still possible while a tenant is restricted.
 
 ## Audit
 

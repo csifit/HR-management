@@ -425,6 +425,7 @@ export function actionLabel(action: string, locale: Locale) {
     "salary.changed": ["Salariu actualizat", "Salary updated"],
     "organisation.created": ["Organizație creată", "Organisation created"],
     "organisation.updated": ["Organizație actualizată", "Organisation updated"],
+    "organisation.status_changed": ["Acces la organizație schimbat", "Organisation access changed"],
     "membership.updated": ["Acces actualizat", "Access updated"],
   };
   return labels[action]?.[locale === "ro" ? 0 : 1] ?? action;

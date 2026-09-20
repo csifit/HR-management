@@ -11,7 +11,7 @@ export default async function EditEmployeePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireHR();
+  await requireHR(true);
   const { employee } = await getEmployee((await params).id);
   const locale = await getLocale();
   const d = dictionary(locale);

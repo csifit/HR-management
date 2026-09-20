@@ -8,6 +8,8 @@ out/
 .sites-runtime/
 supabase/.temp/
 supabase/.branches/
+supabase/environments/**/supabase/.temp/
+supabase/environments/**/supabase/.branches/
 *.log
 test-results/
 .env.local

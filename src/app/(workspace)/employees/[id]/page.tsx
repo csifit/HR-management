@@ -25,6 +25,7 @@ export default async function EmployeePage({
   const locale = await getLocale();
   const d = dictionary(locale);
   const manage = canManage(membership.role);
+  const writable = manage && organisation.status === "active";
   const own = employee.user_id === user.id;
   const canSeeContracts = manage || own;
   const selected = (await searchParams).tab ?? "personal";
@@ -86,7 +87,7 @@ export default async function EmployeePage({
               {employee.job_title} · {employee.department}
             </p>
           </div>
-          {manage && (
+          {writable && (
             <Link
               className="button secondary"
               href={`/employees/${employee.id}/edit`}
@@ -191,7 +192,7 @@ export default async function EmployeePage({
               <h2>{d.contracts}</h2>
               <p>{d.contractIntro}</p>
             </div>
-            {manage && (
+            {writable && (
               <Link
                 className="button primary"
                 href={`/employees/${employee.id}/contracts/new`}
@@ -211,7 +212,7 @@ export default async function EmployeePage({
                     </h2>
                     <StatusBadge value={contract.status} d={d} />
                   </div>
-                  {manage && (
+                  {writable && (
                     <Link
                       href={`/employees/${employee.id}/contracts/${contract.id}/edit`}
                     >
@@ -282,7 +283,7 @@ export default async function EmployeePage({
               description={d.noContractsBody}
               icon={Files}
               href={
-                manage ? `/employees/${employee.id}/contracts/new` : undefined
+                writable ? `/employees/${employee.id}/contracts/new` : undefined
               }
               label={d.addContract}
             />

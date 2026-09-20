@@ -20,6 +20,7 @@ export default async function DashboardPage() {
   const locale = await getLocale();
   const d = dictionary(locale);
   const manage = canManage(membership.role);
+  const writable = manage && organisation.status === "active";
   const [summary, recent, activity] = await Promise.all([
     supabase.rpc("dashboard_summary", { p_organisation_id: organisation.id }),
     supabase
@@ -54,7 +55,7 @@ export default async function DashboardPage() {
         title={d.overview}
         description={d.overviewIntro}
       >
-        {manage && (
+        {writable && (
           <Link className="button primary" href="/employees/new">
             <Plus size={18} />
             {d.addEmployee}
@@ -112,8 +113,8 @@ export default async function DashboardPage() {
           ) : (
             <EmptyState
               title={d.noEmployees}
-              description={manage ? d.noEmployeesBody : d.noData}
-              href={manage ? "/employees/new" : undefined}
+              description={writable ? d.noEmployeesBody : d.noData}
+              href={writable ? "/employees/new" : undefined}
               label={d.addEmployee}
             />
           )}

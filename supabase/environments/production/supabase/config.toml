@@ -1,0 +1,14 @@
+project_id = "hrconnector-production"
+
+# Only these declared authentication settings are pushed to the hosted project.
+# The main supabase/config.toml remains the local development configuration.
+[auth]
+site_url = "https://www.mkdir.space"
+additional_redirect_urls = [
+  "https://www.mkdir.space/auth/confirm",
+  "https://www.mkdir.space/auth/confirm?next=/update-password",
+  "https://www.mkdir.space/update-password",
+  "http://localhost:3000/auth/confirm",
+  "http://localhost:3000/auth/confirm?next=/update-password",
+  "http://localhost:3000/update-password"
+]

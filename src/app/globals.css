@@ -1718,6 +1718,292 @@ td,
 .card-heading a {
   font-size: 0.875rem;
 }
+.platform-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-height: 82px;
+  padding: 18px max(24px, calc((100vw - 1240px) / 2));
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.platform-label,
+.platform-header-actions,
+.platform-filters,
+.platform-pagination {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.platform-label {
+  color: var(--muted);
+  border-left: 1px solid var(--line);
+  padding-left: 24px;
+}
+.platform-header-actions {
+  margin-left: auto;
+}
+.platform-main {
+  max-width: 1240px;
+  padding: 40px 24px;
+  margin: auto;
+}
+.platform-filters {
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+.platform-filters input,
+.platform-filters select,
+.organisation-access textarea {
+  padding: 10px 13px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  min-height: 42px;
+}
+.platform-filters input {
+  flex: 1;
+  min-width: 210px;
+}
+.organisation-list {
+  display: grid;
+  gap: 10px;
+}
+.organisation-accordion {
+  overflow: hidden;
+}
+.organisation-accordion summary {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 22px;
+  cursor: pointer;
+  list-style: none;
+}
+.organisation-accordion summary::-webkit-details-marker {
+  display: none;
+}
+.organisation-accordion summary:hover {
+  background: var(--background);
+}
+.organisation-identity {
+  flex: 1;
+  min-width: 0;
+}
+.organisation-identity strong,
+.organisation-identity small,
+.organisation-counts small {
+  display: block;
+}
+.organisation-identity strong {
+  overflow-wrap: anywhere;
+}
+.organisation-identity small,
+.organisation-counts small {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.organisation-counts {
+  text-align: right;
+  font-size: 0.875rem;
+  min-width: 100px;
+}
+.organisation-status {
+  border-radius: 20px;
+  padding: 4px 11px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  min-width: 95px;
+  text-align: center;
+}
+.organisation-active {
+  color: #197146;
+  background: #edf8f1;
+}
+.organisation-suspended {
+  color: #885c00;
+  background: #fff5da;
+}
+.organisation-blocked {
+  color: #b52e36;
+  background: #fff0f1;
+}
+.organisation-accordion[open] .accordion-chevron {
+  transform: rotate(180deg);
+}
+.organisation-expanded {
+  border-top: 1px solid var(--line);
+  padding: 28px;
+}
+.organisation-edit-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  gap: 32px;
+}
+.organisation-access {
+  border-left: 1px solid var(--line);
+  padding-left: 28px;
+  min-width: 0;
+}
+.platform-section-intro {
+  margin-bottom: 24px;
+  font-size: 0.875rem;
+}
+.platform-owner {
+  font-size: 0.875rem;
+  margin: 16px 0;
+  overflow-wrap: anywhere;
+}
+.platform-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.platform-fieldset > .form-grid {
+  margin-bottom: 22px;
+}
+.platform-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.875rem;
+}
+.platform-confirm input {
+  margin-top: 4px;
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+.access-explanation {
+  color: var(--muted);
+  font-size: 0.8rem;
+  display: grid;
+  gap: 9px;
+}
+.organisation-access textarea {
+  width: 100%;
+  resize: vertical;
+}
+.organisation-access .notice {
+  margin: 16px 0;
+  overflow-wrap: anywhere;
+}
+.platform-history {
+  margin-top: 28px;
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+.platform-history > p {
+  font-size: 0.8rem;
+}
+.platform-history ol {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+}
+.platform-history li {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 20px;
+  padding: 13px 0;
+  border-top: 1px solid var(--line);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+.platform-history time {
+  color: var(--muted);
+}
+.platform-history small {
+  font-size: 0.75rem;
+}
+.platform-pagination {
+  justify-content: flex-end;
+  margin-top: 24px;
+  font-size: 0.875rem;
+}
+.platform-create {
+  padding: 30px;
+  max-width: 840px;
+}
+.platform-empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--muted);
+}
+.organisation-restriction {
+  margin-bottom: 24px;
+  background: #fff5da;
+  color: #745000;
+}
+@media (max-width: 850px) {
+  .platform-header {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .platform-header-actions {
+    flex-wrap: wrap;
+  }
+  .organisation-edit-grid {
+    grid-template-columns: 1fr;
+  }
+  .organisation-access {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding: 24px 0 0;
+  }
+}
+@media (max-width: 600px) {
+  .platform-header {
+    padding: 18px;
+  }
+  .platform-header-actions {
+    margin: 0;
+    width: 100%;
+    gap: 12px;
+  }
+  .platform-header-actions .button {
+    font-size: 0.8rem;
+  }
+  .platform-main {
+    padding: 28px 16px;
+  }
+  .platform-filters {
+    gap: 10px;
+  }
+  .platform-filters input {
+    flex-basis: 100%;
+  }
+  .platform-filters select {
+    flex: 1;
+  }
+  .organisation-accordion summary {
+    gap: 10px;
+    padding: 16px 12px;
+  }
+  .organisation-accordion summary .org-icon {
+    display: none;
+  }
+  .organisation-counts {
+    display: none;
+  }
+  .organisation-identity strong {
+    font-size: 0.9rem;
+  }
+  .organisation-status {
+    min-width: auto;
+    font-size: 0.75rem;
+  }
+  .organisation-expanded,
+  .platform-create {
+    padding: 22px 16px;
+  }
+  .platform-history li {
+    grid-template-columns: 1fr;
+    gap: 5px;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

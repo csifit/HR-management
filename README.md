@@ -7,7 +7,7 @@ A white-label HR workspace for Romanian companies. Next.js App Router, strict Ty
 - Email/password signup, confirmation, sign-in, sign-out, and password recovery.
 - Organisation creation in one database transaction; organisation switching and settings.
 - Owner, HR manager, manager, and employee access enforced in server actions and PostgreSQL RLS.
-- A separately provisioned platform administrator role for organisation metadata. It never bypasses tenant HR policies.
+- A separately provisioned Superadmin area with searchable, paginated organisation accordions, onboarding details, creation with a confirmed owner, and audited suspension/blocking/restoration. It never bypasses tenant HR policies.
 - Dashboard with live counts, departments, recent employees, and audit activity.
 - Employee directory with search, filters and pagination; creation, editing, profiles, and manager assignment.
 - Contract creation/editing, statuses, fixed/indefinite terms, salary storage, and the database relationship for future addenda.
@@ -41,8 +41,8 @@ npx supabase login
 npx supabase link --project-ref your-project-ref
 npx supabase db push --linked
 npx supabase config diff
-# Review declared differences before applying configuration.
-npx supabase config push
+# The root Supabase configuration is for local development.
+# Do not push its localhost Site URL to the production project.
 npm run dev
 ```
 
@@ -70,7 +70,17 @@ where lower(email) = lower('YOUR_CONFIRMED_EMAIL')
 on conflict (user_id) do nothing;
 ```
 
-The platform admin page appears after the account also has an organisation membership. Platform administrators see organisation metadata only. No public signup or editable user metadata can grant this role.
+Superadmins can open `/platform` without any organisation membership. After signing in, an administrator without memberships is routed there automatically. No public signup or editable user metadata can grant this role.
+
+In Superadmin, expand an organisation row to edit its legal name, CUI, trade register number, registered address, city/county and business contact details. Creating an organisation requires an existing, email-confirmed owner account; the administrator is not automatically added as a tenant member. CUI uniqueness ignores the optional `RO` prefix. These fields prepare onboarding; they do not connect to REGES or validate government records.
+
+Access states are independent of employee and contract statuses:
+
+- **Active:** members can use their assigned roles normally.
+- **Suspended:** members can read their permitted HR data; HR, organisation and membership changes are disabled.
+- **Blocked:** HR data and read RPCs are unavailable. Members can still see their own membership/organisation metadata, switch organisations and sign out. Superadmin access remains available to provisioned administrators.
+
+Every status transition requires a reason and UI confirmation; the reason is visible to members. Database policies and write guards enforce restrictions on direct API calls as well as the interface. Row locks serialize access changes with writes; version checks prevent stale Superadmin forms from overwriting newer organisation changes. Restoration retains all records. Organisation audit history records actors, changed field names, status transitions and reasons; the overview shows the latest 10 organisation events, never employee or salary history.
 
 ## Auth email configuration
 
@@ -99,6 +109,8 @@ Branding is deployment-wide in this MVP. Each tenant has its own organisation na
 ```text
 src/app/(auth)/             Authentication screens
 src/app/(workspace)/        Protected dashboard, employees, contracts and settings
+src/app/platform/           Membership-independent Superadmin pages and mutations
+src/app/organisation-access/ Blocked-workspace explanation and organisation switching
 src/app/actions.ts          Validated and authorised server mutations
 src/app/auth/confirm/       Email confirmation and recovery callbacks
 src/components/            Shared forms, shell and interface elements
@@ -120,9 +132,10 @@ npm run lint
 npm run build
 npx supabase db lint --linked --level warning
 npx supabase db query --linked --file tests/live-rls-smoke.sql
+npx supabase db query --linked --file tests/live-platform-smoke.sql
 ```
 
-The test suite runs the real migration in an embedded PostgreSQL engine (PGlite) with realistic Supabase auth roles. It checks cross-tenant reads/writes, foreign-key tenant constraints, salary access, self-promotion, account linking, immutable audit records, final-owner protection, and platform boundaries. The live SQL smoke check uses temporary records inside a transaction and rolls everything back, including auth users and audit rows.
+The 20-test suite runs all migrations in an embedded PostgreSQL engine (PGlite) with realistic Supabase auth roles. It checks cross-tenant reads/writes, foreign-key tenant constraints, salary access, self-promotion, account linking, immutable audit records, final-owner protection, platform boundaries, organisation access states, restoration and stale updates. Both live SQL smoke checks use temporary records inside transactions and roll everything back, including auth users and audit rows.
 
 ## Vercel deployment
 
@@ -134,6 +147,16 @@ The test suite runs the real migration in an embedded PostgreSQL engine (PGlite)
 6. Deploy, create a confirmed owner account, and verify sign-in, organisation creation, employee and contract flows.
 
 GitHub and Vercel credentials are not stored in the source. Standard Next.js server rendering and server actions work directly on Vercel; no alternative hosting runtime is required.
+
+The current production origin is `https://www.mkdir.space`. A separate production configuration declares only the hosted auth Site URL and allowed redirects, retaining localhost callbacks for development:
+
+```powershell
+npx supabase --workdir supabase/environments/production config diff --project-ref mlgnmdhfhybhzzcoxmtr
+# Review the diff before applying; undeclared remote settings are preserved.
+npx supabase --workdir supabase/environments/production config push --project-ref mlgnmdhfhybhzzcoxmtr
+```
+
+In Vercel, the application expects **`NEXT_PUBLIC_SITE_URL=https://www.mkdir.space`**, not `PUBLIC_SITE_URL`. Changing Vercel environment variables requires a new deployment. Supabase's production auth settings were applied and checked during the checkpoint review.
 
 ## References
 

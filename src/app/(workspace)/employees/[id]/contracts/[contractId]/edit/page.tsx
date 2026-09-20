@@ -13,7 +13,7 @@ export default async function EditContractPage({
 }: {
   params: Promise<{ id: string; contractId: string }>;
 }) {
-  await requireHR();
+  await requireHR(true);
   const { id, contractId } = await params;
   if (!idSchema.safeParse(contractId).success) notFound();
   const { employee, supabase, organisation } = await getEmployee(id);

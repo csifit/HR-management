@@ -26,7 +26,7 @@ export default async function EmployeesPage({
   const term = searchTerm(filters.q);
   const page = pageNumber(filters.page);
   const pageSize = 12;
-  const manage = canManage(membership.role);
+  const manage = canManage(membership.role) && organisation.status === "active";
   let query = supabase
     .from("employees")
     .select("*", { count: "exact" })

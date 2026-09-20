@@ -25,6 +25,7 @@ import { dictionary, roleLabel, type Locale } from "@/lib/i18n";
 import type { Membership, Organisation } from "@/lib/types";
 import { canManage } from "@/lib/types";
 import { Brand, Avatar } from "./ui";
+import { platformDictionary } from "@/lib/platform-i18n";
 export function LanguageSwitch({ locale }: { locale: Locale }) {
   return (
     <form
@@ -227,6 +228,16 @@ export function AppShell({
           </div>
         </header>
         <main id="main-content" className="main-content">
+          {organisation.status === "suspended" && (
+            <div className="notice organisation-restriction" role="status">
+              <div>
+                <strong>{platformDictionary(locale).suspendedBanner}</strong>
+                {organisation.status_reason && (
+                  <p>{organisation.status_reason}</p>
+                )}
+              </div>
+            </div>
+          )}
           {children}
         </main>
         <footer className="app-footer">

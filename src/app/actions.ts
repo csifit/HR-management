@@ -7,6 +7,8 @@ import { createClient } from "@/lib/supabase/server";
 import { isConfigured } from "@/lib/supabase/config";
 import { requireUser, requireOrganisation, getMemberships } from "@/lib/auth";
 import { getDictionary } from "@/lib/locale";
+import { getLocale } from "@/lib/locale";
+import { platformDictionary } from "@/lib/platform-i18n";
 import { canManage, type ActionState } from "@/lib/types";
 import {
   organisationSchema,
@@ -45,6 +47,8 @@ async function invalid(
 }
 async function failure(code?: string): Promise<ActionState> {
   const d = await getDictionary();
+  if (code === "P0004")
+    return { error: platformDictionary(await getLocale()).suspendedBanner };
   return {
     error:
       code === "23505"
@@ -171,12 +175,15 @@ export async function saveOrganisation(
 ): Promise<ActionState> {
   const { supabase, organisation, membership } = await requireOrganisation();
   if (membership.role !== "organisation_owner") return failure("42501");
+  if (organisation.status !== "active") return failure("P0004");
   const parsed = organisationSchema.safeParse(values(form));
   if (!parsed.success) return invalid(parsed.error, form);
   const { error } = await supabase
     .from("organisations")
     .update(parsed.data)
-    .eq("id", organisation.id);
+    .eq("id", organisation.id)
+    .select("id")
+    .single();
   if (error) return failure(error.code);
   revalidatePath("/", "layout");
   return { success: (await getDictionary()).orgSaved };
@@ -188,6 +195,7 @@ export async function saveEmployee(
 ): Promise<ActionState> {
   const { supabase, organisation, membership } = await requireOrganisation();
   if (!canManage(membership.role)) return failure("42501");
+  if (organisation.status !== "active") return failure("P0004");
   if (id && !idSchema.safeParse(id).success) return failure();
   const parsed = employeeSchema.safeParse(values(form));
   if (!parsed.success) return invalid(parsed.error, form);
@@ -216,6 +224,7 @@ export async function saveContract(
 ): Promise<ActionState> {
   const { supabase, organisation, membership } = await requireOrganisation();
   if (!canManage(membership.role)) return failure("42501");
+  if (organisation.status !== "active") return failure("P0004");
   if (
     !idSchema.safeParse(employeeId).success ||
     (contractId && !idSchema.safeParse(contractId).success)
@@ -230,13 +239,11 @@ export async function saveContract(
         .eq("id", contractId)
         .eq("employee_id", employeeId)
         .eq("organisation_id", organisation.id)
-    : supabase
-        .from("employment_contracts")
-        .insert({
-          ...parsed.data,
-          organisation_id: organisation.id,
-          employee_id: employeeId,
-        });
+    : supabase.from("employment_contracts").insert({
+        ...parsed.data,
+        organisation_id: organisation.id,
+        employee_id: employeeId,
+      });
   const { error } = await query.select("id").single();
   if (error) return { ...(await failure(error.code)), values: values(form) };
   revalidatePath("/dashboard");
@@ -250,6 +257,7 @@ export async function saveMember(
 ): Promise<ActionState> {
   const { supabase, organisation, membership } = await requireOrganisation();
   if (membership.role !== "organisation_owner") return failure("42501");
+  if (organisation.status !== "active") return failure("P0004");
   const parsed = memberSchema.safeParse(values(form));
   if (!parsed.success) return invalid(parsed.error, form);
   const { error } = await supabase.rpc("set_organisation_member", {

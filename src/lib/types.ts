@@ -3,6 +3,7 @@ export type EmployeeStatus =
   "active" | "onboarding" | "suspended" | "terminated";
 export type ContractStatus = "draft" | "active" | "suspended" | "terminated";
 export type ContractType = "indefinite" | "fixed_term";
+export type OrganisationStatus = "active" | "suspended" | "blocked";
 export type DirectoryDetail = {
   employee_id: string;
   manager_name: string | null;
@@ -14,6 +15,27 @@ export type Organisation = {
   cui: string;
   created_by: string | null;
   created_at: string;
+  status: OrganisationStatus;
+  status_reason: string | null;
+  status_changed_at: string | null;
+  status_changed_by: string | null;
+  registration_number: string | null;
+  registered_address: string | null;
+  city: string | null;
+  county: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  version: number;
+};
+export type PlatformOrganisation = Organisation & {
+  employee_count: number;
+  member_count: number;
+  owners: string[];
+  history: Pick<
+    AuditEntry,
+    "id" | "action" | "user_id" | "metadata" | "created_at"
+  >[];
 };
 export type Membership = {
   organisation_id: string;
@@ -69,7 +91,13 @@ export type AuditEntry = {
   action: string;
   entity: string;
   entity_id: string;
-  metadata: { changed_fields?: string[]; role?: string };
+  metadata: {
+    changed_fields?: string[];
+    role?: string;
+    from_status?: OrganisationStatus;
+    to_status?: OrganisationStatus;
+    reason?: string;
+  };
   created_at: string;
 };
 export type ActionState = {

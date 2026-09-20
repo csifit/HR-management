@@ -8,7 +8,9 @@ import { LanguageSwitch } from "@/components/shell";
 import { OrganisationForm } from "@/components/forms";
 import { signOut } from "@/app/actions";
 export default async function OnboardingPage() {
-  await requireUser();
+  const { supabase } = await requireUser();
+  const admin = await supabase.rpc("is_platform_admin");
+  if (admin.error) throw new Error("Platform access could not be checked.");
   const memberships = await getMemberships();
   const locale = await getLocale();
   const d = dictionary(locale);
@@ -27,6 +29,7 @@ export default async function OnboardingPage() {
         <OrganisationForm locale={locale} />
         <div className="onboarding-footer">
           {memberships.length > 0 && <Link href="/dashboard">{d.back}</Link>}
+          {admin.data && <Link href="/platform">{d.platform}</Link>}
           <form action={signOut}>
             <button className="text-button">{d.signOut}</button>
           </form>

@@ -4,6 +4,8 @@
 
 Implemented: Next.js/TypeScript/Tailwind, Supabase authentication, organisation creation and switching, owner/HR/manager/employee roles, platform admin provisioning, tenant-safe RLS, dashboard layout, Romanian/English UI, deployment-wide white-label configuration, audit logging.
 
+Expanded Superadmin implemented: membership-independent access, compact organisation accordions, search/status filters and pagination, company onboarding/contact fields, creation with a confirmed owner, reversible suspension/blocking with reasons and audit history, database enforcement and stale-edit protection. Stripe, trials and final pricing remain future work.
+
 ## Phase 2 — Employee and contract core
 
 Implemented: directory, filters/search/pagination, create/edit employee, profiles, manager assignment, confirmed-account linking, contract create/edit/statuses, restricted salary information, activity history, and a same-employee parent-contract relationship for future addenda.

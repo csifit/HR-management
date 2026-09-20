@@ -7,7 +7,7 @@ import { dictionary } from "@/lib/i18n";
 import { PageHeader } from "@/components/ui";
 import { EmployeeForm } from "@/components/forms";
 export default async function NewEmployeePage() {
-  await requireHR();
+  await requireHR(true);
   const locale = await getLocale();
   const d = dictionary(locale);
   const managers = await getManagers();

@@ -3,10 +3,16 @@ import Image from "next/image";
 import { ArrowUpRight, Users, Plus, type LucideIcon } from "lucide-react";
 import { brand } from "@/lib/brand";
 import type { Dictionary } from "@/lib/i18n";
-export function Brand({ light = false }: { light?: boolean }) {
+export function Brand({
+  light = false,
+  href = "/dashboard",
+}: {
+  light?: boolean;
+  href?: string;
+}) {
   return (
     <Link
-      href="/dashboard"
+      href={href}
       className={`brand ${light ? "brand-light" : ""}`}
       aria-label={brand.name}
     >
@@ -153,7 +159,7 @@ export function Detail({
   return (
     <div className="detail">
       <dt>{label}</dt>
-      <dd>{children || "—"}</dd>
+      <dd>{children ?? "—"}</dd>
     </div>
   );
 }

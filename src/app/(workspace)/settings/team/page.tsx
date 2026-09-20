@@ -57,14 +57,15 @@ export default async function TeamPage() {
             </table>
           </div>
         </section>
-        {membership.role === "organisation_owner" ? (
+        {membership.role === "organisation_owner" &&
+        organisation.status === "active" ? (
           <section className="card member-form-card">
             <h2>{d.addMember}</h2>
             <MemberForm locale={locale} employees={employees.data} />
           </section>
-        ) : (
+        ) : organisation.status === "active" ? (
           <p className="notice">{d.teamOwnerOnly}</p>
-        )}
+        ) : null}
       </div>
     </>
   );

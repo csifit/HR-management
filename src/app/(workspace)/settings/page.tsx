@@ -11,7 +11,8 @@ export default async function SettingsPage() {
     <>
       <PageHeader title={d.organisationDetails} />
       <section className="card settings-form">
-        {membership.role === "organisation_owner" ? (
+        {membership.role === "organisation_owner" &&
+        organisation.status === "active" ? (
           <OrganisationForm locale={locale} organisation={organisation} />
         ) : (
           <>
@@ -19,7 +20,9 @@ export default async function SettingsPage() {
               <Detail label={d.orgName}>{organisation.name}</Detail>
               <Detail label={d.cui}>{organisation.cui}</Detail>
             </dl>
-            <p className="notice profile-aside-note">{d.orgReadOnly}</p>
+            {organisation.status === "active" && (
+              <p className="notice profile-aside-note">{d.orgReadOnly}</p>
+            )}
           </>
         )}
       </section>
