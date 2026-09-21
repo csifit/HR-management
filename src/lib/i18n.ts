@@ -443,6 +443,27 @@ export function actionLabel(action: string, locale: Locale) {
       "Work calendar updated",
     ],
     "attendance.saved": ["Pontaj salvat", "Attendance saved"],
+    "benefit.provider_saved": [
+      "Furnizor de beneficii salvat",
+      "Benefit provider saved",
+    ],
+    "benefit.saved": ["Beneficiu salvat", "Benefit saved"],
+    "benefit.enrolment_saved": [
+      "Înscriere la beneficiu salvată",
+      "Benefit enrolment saved",
+    ],
+    "benefit.month_prepared": [
+      "Lună de beneficii pregătită",
+      "Benefits month prepared",
+    ],
+    "benefit.item_reviewed": [
+      "Alocare de beneficiu verificată",
+      "Benefit allocation reviewed",
+    ],
+    "benefit.month_approved": [
+      "Lună de beneficii aprobată",
+      "Benefits month approved",
+    ],
     "membership.updated": ["Acces actualizat", "Access updated"],
   };
   return labels[action]?.[locale === "ro" ? 0 : 1] ?? action;

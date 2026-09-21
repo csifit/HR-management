@@ -21,6 +21,16 @@ import type {
   BalanceSummary,
   AttendanceDay,
 } from "./time-types";
+import type {
+  Benefit,
+  BenefitProvider,
+  EmployeeBenefit,
+  BenefitRun,
+  BenefitItem,
+  BenefitModel,
+  BenefitAdapterKey,
+  BenefitSummary,
+} from "./benefit-types";
 type Table<Row> = {
   Row: Row;
   Insert: Partial<Row>;
@@ -41,9 +51,74 @@ export type Database = {
       work_calendar_days: Table<CalendarDay>;
       leave_requests: Table<LeaveRequest>;
       attendance: Table<Attendance>;
+      benefit_providers: Table<BenefitProvider>;
+      benefits: Table<Benefit>;
+      employee_benefits: Table<EmployeeBenefit>;
+      benefit_runs: Table<BenefitRun>;
+      benefit_run_items: Table<BenefitItem>;
     };
     Views: Record<string, never>;
     Functions: {
+      save_benefit_provider: {
+        Args: {
+          p_org: string;
+          p_id: string | null;
+          p_version: number | null;
+          p_name: string;
+          p_adapter: BenefitAdapterKey;
+          p_active: boolean;
+        };
+        Returns: string;
+      };
+      save_benefit: {
+        Args: {
+          p_org: string;
+          p_id: string | null;
+          p_version: number | null;
+          p_provider: string;
+          p_name: string;
+          p_model: BenefitModel;
+          p_amount: number;
+          p_active: boolean;
+        };
+        Returns: string;
+      };
+      save_employee_benefit: {
+        Args: {
+          p_org: string;
+          p_id: string | null;
+          p_version: number | null;
+          p_employee: string;
+          p_benefit: string;
+          p_start: string;
+          p_end: string | null;
+          p_active: boolean;
+        };
+        Returns: string;
+      };
+      prepare_benefit_month: {
+        Args: { p_org: string; p_month: string; p_version: number | null };
+        Returns: string;
+      };
+      review_benefit_item: {
+        Args: {
+          p_org: string;
+          p_id: string;
+          p_version: number;
+          p_included: boolean;
+          p_amount: number;
+          p_note: string;
+        };
+        Returns: undefined;
+      };
+      approve_benefit_month: {
+        Args: { p_org: string; p_id: string; p_version: number };
+        Returns: undefined;
+      };
+      benefit_month_summary: {
+        Args: { p_org: string; p_run: string };
+        Returns: BenefitSummary;
+      };
       leave_calendar: {
         Args: { p_org: string; p_month: string; p_employee: string | null };
         Returns: { day: string; pending: number; approved: number }[];
@@ -184,6 +259,7 @@ export type Database = {
       leave_category: LeaveCategory;
       leave_status: LeaveStatus;
       attendance_absence: AttendanceAbsence;
+      benefit_model: BenefitModel;
     };
     CompositeTypes: Record<string, never>;
   };

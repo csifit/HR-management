@@ -2232,6 +2232,38 @@ td,
     font-size: 0.8rem;
   }
 }
+.benefit-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.benefit-confirm input {
+  margin-top: 4px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.benefit-run-heading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 24px 0;
+}
+.benefit-flags {
+  margin: 12px 0;
+  padding-left: 16px;
+  max-width: 280px;
+  white-space: normal;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.benefit-totals strong {
+  font-size: 1.4rem;
+  overflow-wrap: anywhere;
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

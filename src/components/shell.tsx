@@ -68,6 +68,7 @@ export function AppShell({
       : []),
     { href: "/leave", label: d.leave, icon: CalendarDays },
     { href: "/attendance", label: d.attendance, icon: Clock3 },
+    { href: "/benefits", label: d.benefits, icon: Gift },
   ];
   const current = path.startsWith("/settings/team")
     ? d.team
@@ -145,7 +146,6 @@ export function AppShell({
           ))}
           <span className="nav-section-label next-section">{d.comingNext}</span>
           {[
-            { label: d.benefits, icon: Gift },
             { label: d.documents, icon: FolderClosed },
             { label: d.integrations, icon: Plug },
           ].map(({ label, icon: Icon }) => (

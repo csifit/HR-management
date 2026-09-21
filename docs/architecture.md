@@ -1,4 +1,4 @@
-# Initial architecture
+# Architecture
 
 One Next.js application and one Supabase PostgreSQL database. No microservices, queue infrastructure, ORM, or event bus.
 
@@ -68,9 +68,21 @@ Requests snapshot working dates when submitted and stay within one calendar year
 
 Linked employees submit their own requests; HR may submit for others. HR/owners and assigned managers review others' requests. Self approval/rejection is prohibited. Employees cancel their pending requests; HR can cancel pending/approved ones. Reason fields are employee-visible and must not contain medical details. Audit stores actor/action/entity and changed field names rather than duplicating notes or personal values.
 
+## Benefits
+
+`benefit_providers`, `benefits`, `employee_benefits`, `benefit_runs` and `benefit_run_items` all belong to an organisation and use composite tenant foreign keys. Public API callers have SELECT only. HR/owner-checked security-definer RPCs manage catalogue/enrolment and prepare/review/approve months. They reuse the organisation lock to serialize writes with attendance, membership and access-state changes.
+
+Benefits have a fixed model and editable amount/availability. One enrolment per employee/benefit carries its dates and availability. Annual spending is tracked across approved monthly items for that enrolment/year; flexible limits apply per month. Calculation inputs use employee status, contract dates/status, configuration versions, calendar/attendance and approved annual allocations, excluding salary. Missing/ambiguous/current employment states require HR review rather than inferred statutory eligibility.
+
+Preparation stores human-readable benefit/provider/employee snapshots, rates, suggested and final amounts, review flags and the month's worked-day count. A canonical source hash rejects approval after relevant input changes. Source hashes are change detectors, not credentials or authorization. All exceptions must be explicitly reviewed; row/run versions reject stale updates. Repreparing a draft replaces its reviews; approved runs/items are immutable through the API. No approved-month correction workflow is included yet.
+
+HR/owners see the tenant's catalogue and drafts. A linked employee or manager sees only their own enrolments, associated definitions and approved monthly items; assigned-staff benefit amounts remain private. Provider names are readable by tenant members. Global platform administrators gain no HR bypass. Suspension allows reads only; blocking closes all benefit reads and RPCs. Review notes are available to the employee after approval; monetary/personal values are not copied into audit metadata.
+
+`BenefitsProvider` adapters for Pluxee, Edenred, Up România and custom providers are explicit unavailable implementations. They never simulate success or send network requests. Adding a real adapter requires verified provider documentation and a server-only credential design.
+
 ## Future additions
 
-Add each module with its own migration, organisation foreign key, policies, actions, and UI. Benefits, protected Storage documents, workflow checklists, and provider adapters are intentionally absent until their phase. Integration secrets will need a server-only encrypted storage design and key lifecycle before any credentials are accepted. A normal PostgreSQL submission table can support REGES status tracking when required; successful provider calls must never be simulated in production.
+Add each module with its own migration, organisation foreign key, policies, actions, and UI. Protected Storage documents, workflow checklists, and live provider adapters are intentionally absent until their phase. Integration secrets will need a server-only encrypted storage design and key lifecycle before any credentials are accepted. A normal PostgreSQL submission table can support REGES status tracking when required; successful provider calls must never be simulated in production.
 
 ## Current limits
 
@@ -78,4 +90,4 @@ Add each module with its own migration, organisation foreign key, policies, acti
 - The employee's directory status and contract status are separately maintained; no automated legal or employment-status transitions are inferred.
 - Contract amendments have a safe parent relationship, but a formal amendment workflow and immutable contract version history are deferred.
 - Tax IDs and COR codes receive structural validation only; no government registry verification or legal compliance certification is claimed.
-- No legal payroll, leave allowance, or benefit calculation is implemented.
+- No statutory payroll, leave entitlement, benefit eligibility or tax calculation is implemented. Benefit allocations use configured amounts and HR review.

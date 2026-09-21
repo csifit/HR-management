@@ -119,6 +119,9 @@ export default async function EmployeePage({
               </Link>
             ))}
           <Link href={`/leave?employee=${employee.id}`}>{d.leave}</Link>
+          {(manage || own) && (
+            <Link href={`/benefits?employee=${employee.id}`}>{d.benefits}</Link>
+          )}
           <Link href={`/attendance?employee=${employee.id}`}>
             {d.attendance}
           </Link>

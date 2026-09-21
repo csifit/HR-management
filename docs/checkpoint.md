@@ -1,6 +1,32 @@
 # Safe checkpoint — 21 September 2026
 
-## Current: Phase 3 leave and attendance
+## Current: Phase 4 benefits
+
+The user requested the next phase and confirmed: **recorded worked days for per-day benefits, manual HR review of partial months, fixed monthly amounts without automatic proration, and manual annual/flexible allocations**.
+
+- Implemented `/benefits`, `/benefits/settings` and `/benefits/monthly`. Added sidebar and permitted employee-profile links, Romanian/English forms/messages, audit labels and updated dashboard roadmap text.
+- Catalogue supports custom providers and Pluxee/Edenred/Up România adapter identifiers. Providers, rates and enrolments are configured by HR; no sample or statutory amounts are seeded. Adapter implementations explicitly report unavailable and reject submission. No provider network calls, credentials, orders or payments.
+- Five benefit models: fixed monthly, per recorded worked day, annual allowance, monthly flexible budget and non-financial. RON amounts only. HR maintains one dated enrolment per employee/benefit; the calculation model is immutable after creation.
+- Monthly preparation uses recorded hours greater than zero for worked days, and snapshots employee/provider/benefit names, rates, suggested/final amounts, flags and a deduplicated whole-month worked-day count. Fixed amounts are not automatically prorated. Annual/flexible amounts start at zero for HR allocation. Defaults require an active employee, an overlapping active contract and active configuration.
+- Exceptions cover partial months, missing attendance, no worked days, full-month absence, current employee/contract states, disabled configuration, annual/flexible allocation and an open month. Every flagged row must be reviewed, with a reason. HR can adjust or exclude a row. No statutory eligibility or historical employment-state reconstruction is claimed.
+- Approval checks source changes and versions, serializes through the organisation row lock, and freezes the month. Another month's annual approval can invalidate an existing draft; annual limits and flexible monthly limits are enforced. Preparing again replaces draft adjustments. **Approved months cannot be reopened/corrected in this version**, explicitly stated in the approval UI.
+- HR/owners manage all tenant benefits; linked employees/managers can read only their own enrolments, definitions and approved records. Managers do not gain assigned-staff benefit amounts. Superadmin does not bypass HR policies. RLS, cross-tenant keys, private helper grants, suspension/blocking and audit are covered by tests. Review notes become available to the linked employee after approval; do not enter medical details.
+- Added migration `202609210005_benefits.sql` and applied it successfully to `mlgnmdhfhybhzzcoxmtr`. Live `tests/live-benefits-smoke.sql` passed and rolled back its users, tenants, contracts, attendance, benefits and audit fixtures. Real HR records were not changed.
+- Schema lint reported one warning about implicit JSON initialization in `private.benefit_sources`. Added/applied `202609210006_benefits_jsonb_initialization.sql` to make the cast explicit, keeping the applied migration history intact. All 10 benefits tests, including the rollback smoke script and approved worked-day snapshot, pass against both migrations. The remote lint recheck returned the recurring CLI HTTP 403 after the successful push; no schema error was reported, but the final remote lint result is not yet available.
+- Validation: all 29 existing tests passed with the benefits schema, all 10 new benefits tests pass against both final migrations, ESLint and production build passed. Final TypeScript and `git diff --check` passed too. The final remote schema-lint recheck returned 403 twice; reconnect before retrying. Do not repeat broad checks without a relevant change. README, architecture and roadmap describe setup, calculation rules and limits.
+- Git started clean at `b26fea9` (`leave requests ...`), so the prior leave/attendance work was committed by the user. Benefits source changes are local and uncommitted; no commit, push or Vercel deployment was made. Do not claim the benefits frontend is live in production.
+- The user previously chose to check screens themselves. Preserve that preference: no new password/sign-in request or agent-created real HR test records. Manual benefits screen verification is handed to the user.
+- **User instruction: do not run `npm run dev`.** The agent stopped its development server (session `33893`) after this request. The user controls starting the local server. Do not restart it on resume. The benefits preview URL is `http://localhost:3000/benefits`; opening it requires the user's server to be running. Next.js may have regenerated `next-env.d.ts` to use `.next/dev/types`; this is generated tooling state.
+
+### Resume from here
+
+1. Preserve current Git changes and any manual screen-check results from the user. Both benefits migrations are already applied; do not apply them again or reset the database.
+2. If needed, reconnect the Supabase CLI with the owning account and run `npx supabase db lint --linked --level warning` to finish the final lint recheck. The live workflow smoke test already passed; it need not be repeated for the explicit JSON cast alone.
+3. The user manages the local server and manual screen checks; **do not run `npm run dev`**. Configure providers/rates, enrol an employee and prepare a month; review every exception before locking it with approval.
+4. The owner can commit/push for Vercel deployment when satisfied. Benefits has no live provider integration or export, and no approved-month correction workflow.
+5. Documents and lifecycle checklists are next in the roadmap. Stripe/trials remain separate requirements. Wait for the user's direction before starting another phase.
+
+## Previous checkpoint: Phase 3 leave and attendance
 
 This section supersedes the historical notes below. The user requested leave/attendance and chose **daily records + leave approvals**, not clock-in/out. Keep verification focused to conserve usage; the user offered to run further commands themselves.
 

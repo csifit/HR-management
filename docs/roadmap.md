@@ -20,7 +20,9 @@ Setup requires HR to configure yearly allowances and public holidays/company exc
 
 ## Phase 4 — Benefits
 
-Provider catalogue, benefit definitions, employee enrolment, per-day/fixed/annual/flexible/non-financial models, attendance-aware monthly preparation, exceptions, HR review and approval. No undocumented provider API calls.
+Implemented: tenant-owned provider catalogue and benefit definitions; employee enrolment dates; per-day/fixed/annual/flexible/non-financial models; attendance-aware monthly drafts, exceptions, HR adjustments and approval. Approved allocations and monthly worked-day totals are preserved. Annual/flexible limits, stale-source detection, audit, tenant access states and employee-only benefit visibility are enforced in PostgreSQL.
+
+The user approved manual HR review for mid-month changes, recorded-worked-day counting, fixed amounts without automatic proration and manual annual/flexible allocations. Setup requires actual providers, rates and enrolments; no sample amounts are seeded. Provider adapters explicitly report unavailable. Exports, provider submissions, tax calculations, automatic proration and corrections to approved months are deferred.
 
 ## Phase 5 — Documents and lifecycle
 

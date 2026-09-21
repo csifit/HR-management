@@ -17,6 +17,7 @@ import { canManage } from "@/lib/types";
 import { PageHeader, Metric, EmptyState } from "@/components/ui";
 import { EmployeeTable } from "@/components/employee-table";
 import { timeDictionary } from "@/lib/time-i18n";
+import { benefitDictionary } from "@/lib/benefit-i18n";
 export default async function DashboardPage() {
   const { supabase, organisation, membership } = await requireOrganisation();
   const locale = await getLocale();
@@ -213,7 +214,7 @@ export default async function DashboardPage() {
         </span>
         <div>
           <h3>{d.upcomingModules}</h3>
-          <p>{td.upcoming}</p>
+          <p>{benefitDictionary(locale).upcoming}</p>
         </div>
         <span className="roadmap-tag">{d.planned}</span>
       </div>

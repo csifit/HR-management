@@ -14,9 +14,10 @@ A white-label HR workspace for Romanian companies. Next.js App Router, strict Ty
 - Owner-managed access for existing confirmed accounts, including linking a user to an employee record.
 - Full-day leave requests, manager/HR approvals, calendar/list views, yearly allowances and configurable leave types/work calendar.
 - Daily planned/worked hours and absence records, monthly attendance totals and automatic approved-leave integration.
+- Benefit providers/catalogue, employee enrolment, five calculation models and monthly HR review/approval with saved amounts.
 - Automatic audit events for organisation, membership, employee, contract, salary, leave and attendance changes.
 
-Benefits, documents, REGES, onboarding checklists, and external provider integrations are later phases. Navigation labels identify planned modules. There is no payroll calculation, provider submission, mock integration, or production demo dataset.
+Documents, REGES, onboarding checklists, and external provider integrations are later phases. Navigation labels identify planned modules. There is no payroll calculation, provider submission, simulated integration success, or production demo dataset.
 
 ## Local development
 
@@ -96,6 +97,19 @@ Approved leave fills attendance automatically. Conflicting recorded work/absence
 
 There is no clock-in/out, per-employee recurring schedule, half-day leave, automatic accrual, payroll engine or medical-document storage in this version. Do not enter diagnoses or medical details in decision reasons. The same tenant isolation, suspension/blocking and Superadmin boundaries apply to both modules.
 
+## Benefits setup and monthly preparation
+
+1. Apply migrations `202609210005_benefits.sql` and `202609210006_benefits_jsonb_initialization.sql` before deploying this module. No providers, rates or employee enrolments are seeded.
+2. In **Benefits → Benefits catalogue**, add a provider (Pluxee, Edenred, Up România or custom), then define benefits. All values are in RON. Supported models are fixed monthly, per worked day, annual allowance, monthly flexible budget and non-financial. The amount is a rate or limit, not a statutory or tax calculation. Non-financial amounts must be zero; the model is fixed after creation.
+3. Select an employee in **Benefits** and add an enrolment with start/end dates. Each employee/benefit has one enrolment, which can be edited or disabled. Only HR/owners manage benefits. Employees and managers can read their own linked enrolments and approved records; managers do not see assigned staff's benefit amounts.
+4. In **Monthly preparation**, choose a month and prepare a draft. Per-day amounts count dates with recorded worked hours greater than zero within the enrolment period. Unrecorded days are never assumed worked. Fixed monthly amounts stay at the configured amount; HR reviews any proration manually. Annual and flexible budgets start with zero allocation for HR to fill in.
+5. Review every flagged row, set its final allocation or exclude it, and record a reason. Flags cover missing attendance, partial months, full-month absence, no worked days, inactive employee/enrolment/provider/benefit, missing or suspended/terminated contracts, manual allocations and a month that has not ended. The default inclusion rule requires an active employee, at least one overlapping active contract and active configuration. These are current recorded states, not reconstructed legal eligibility; HR decides exceptions.
+6. Approve after review. Approval freezes the month's records and worked-day total, making approved items visible to the linked employee. It sends no order/payment/provider data. Approved months cannot be reopened/corrected in this version; the form explicitly warns before approval.
+
+Preparation snapshots source data and compares it again before approval. Changes to attendance, relevant employment records, enrolments, configuration or annual spending require preparing again, which replaces draft adjustments. Optimistic versions also reject stale forms. Annual allocations across approved months cannot exceed the configured yearly limit; monthly flexible allocations cannot exceed their limit. Draft annual allocations do not reserve budget, but serialised approval and source checks prevent conflicting drafts from overspending. Monetary values are not duplicated in audit metadata. Review reasons are available to the employee after approval and must not contain medical details.
+
+`src/lib/benefit-providers.ts` defines the future provider adapter boundary. All adapters report disconnected/not implemented and reject submission; there are no credentials or network calls. Provider APIs, exports, statutory tax treatment, automated proration and changes to approved months are deferred.
+
 ## Auth email configuration
 
 In Supabase Authentication → URL Configuration, use the exact application origin as the Site URL. Allow:
@@ -122,7 +136,7 @@ Branding is deployment-wide in this MVP. Each tenant has its own organisation na
 
 ```text
 src/app/(auth)/             Authentication screens
-src/app/(workspace)/        Protected dashboard, employees, contracts, leave, attendance and settings
+src/app/(workspace)/        Protected dashboard, employees, contracts, leave, attendance, benefits and settings
 src/app/platform/           Membership-independent Superadmin pages and mutations
 src/app/organisation-access/ Blocked-workspace explanation and organisation switching
 src/app/actions.ts          Validated and authorised server mutations
@@ -148,9 +162,10 @@ npx supabase db lint --linked --level warning
 npx supabase db query --linked --file tests/live-rls-smoke.sql
 npx supabase db query --linked --file tests/live-platform-smoke.sql
 npx supabase db query --linked --file tests/live-time-smoke.sql
+npx supabase db query --linked --file tests/live-benefits-smoke.sql
 ```
 
-The test suite runs all migrations in an embedded PostgreSQL engine (PGlite) with realistic Supabase auth roles. It checks cross-tenant reads/writes, foreign-key tenant constraints, salary access, self-promotion, account linking, immutable audit records, final-owner protection, platform boundaries, organisation access states, restoration and stale updates. Time-module checks cover balances, overlaps, working-day snapshots, approval rights, attendance conflicts, date validation and monthly totals. All three live SQL smoke checks use temporary records inside transactions and roll everything back, including auth users and audit rows.
+The test suite runs all migrations in an embedded PostgreSQL engine (PGlite) with realistic Supabase auth roles. It checks cross-tenant reads/writes, foreign-key tenant constraints, salary access, self-promotion, account linking, immutable audit records, final-owner protection, platform boundaries, organisation access states, restoration and stale updates. Time-module checks cover balances, overlaps, working-day snapshots, approval rights, attendance conflicts, date validation and monthly totals. Benefits checks cover all five models, mandatory exception review, annual/flexible limits, changing source data, frozen approved records, employee visibility and unavailable provider adapters. All four live SQL smoke checks use temporary records inside transactions and roll everything back, including auth users and audit rows.
 
 ## Vercel deployment
 
