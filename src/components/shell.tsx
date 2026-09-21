@@ -19,6 +19,7 @@ import {
   X,
   Plus,
   Building2,
+  ListChecks,
 } from "lucide-react";
 import { changeLocale, signOut, switchOrganisation } from "@/app/actions";
 import { dictionary, roleLabel, type Locale } from "@/lib/i18n";
@@ -69,6 +70,8 @@ export function AppShell({
     { href: "/leave", label: d.leave, icon: CalendarDays },
     { href: "/attendance", label: d.attendance, icon: Clock3 },
     { href: "/benefits", label: d.benefits, icon: Gift },
+    { href: "/documents", label: d.documents, icon: FolderClosed },
+    ...(canManage(membership.role) ? [{href:"/lifecycle",label:locale==="ro"?"Angajare și plecare":"Onboarding & offboarding",icon:ListChecks}] : []),
   ];
   const current = path.startsWith("/settings/team")
     ? d.team
@@ -146,7 +149,6 @@ export function AppShell({
           ))}
           <span className="nav-section-label next-section">{d.comingNext}</span>
           {[
-            { label: d.documents, icon: FolderClosed },
             { label: d.integrations, icon: Plug },
           ].map(({ label, icon: Icon }) => (
             <span

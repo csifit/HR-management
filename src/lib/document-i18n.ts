@@ -1,0 +1,46 @@
+import type { Locale } from "./i18n";
+const en = {
+  title: "Documents", intro: "Employee files, with access set for each document.",
+  lifecycle: "Onboarding & offboarding", lifecycleIntro: "Track the work needed when someone joins or leaves.",
+  employee: "Employee", search: "Search employees", filter: "Show", choose: "Choose an employee to begin.", more: "Showing the first 50 employees. Search to narrow the list.",
+  none: "No records yet.", previous: "Previous", next: "Next", titleField: "Title", category: "Category", visibility: "Visibility", hr_only: "HR only", employeeVisible: "Employee and HR",
+  employment: "Employment", identity: "Identity", certificate: "Certificate", other: "Other",
+  upload: "Upload PDF", generate: "Generate PDF", file: "PDF file", fileHelp: "PDF only, up to 10 MB. Files are retained when archived; there is no automatic deletion.",
+  template: "Template", summary: "Employee summary", letter: "HR letter", body: "Letter text", bodyHelp: "Employee and company details are filled in automatically. Review the PDF before sharing it. These templates are not contracts or electronic signatures.",
+  pending: "Upload incomplete", uploaded: "Uploaded", generated: "Generated", signed: "Signed (recorded by HR)", archived: "Archived", download: "Download", finish: "Finish upload", archive: "Archive", markSigned: "Record signed status", saveVisibility: "Save visibility", confirm: "I confirm this change.", signedHelp: "Record an externally signed document. This does not add or verify an electronic signature. Upload the signed copy as a new file first if its contents differ.",
+  active: "Active", completed: "Completed", cancelled: "Cancelled", all: "All", includeArchived: "Include archived", created: "Added", state: "Status", size: "Size", actions: "Manage", source: "Source",
+  newCase: "Start checklist", onboarding: "Onboarding", offboarding: "Offboarding", target: "Target date", kind: "Checklist", open: "Open checklist", tasks: "Tasks", todo: "To do", done: "Done", skipped: "Skipped", note: "Note / reason", noteHelp: "At least 5 characters when skipping, cancelling or revoking access. Keep notes limited to what HR needs.",
+  addTask: "Add task", save: "Save", close: "Close checklist", closeHelp: "Complete only after every task is done or explicitly skipped. Closed checklists remain in the history.",
+  manualHelp: "Checklist items are manual confirmations. They do not submit to REGES, change contracts or benefits, or run payroll.",
+  revoke: "Revoke company access", noAccount: "Confirm no company access", revokeHelp: "Owner only. Removes this company's membership and manager assignments. The account and access to other companies are retained. Existing downloaded files cannot be recalled.",
+  ownerOnly: "An organisation owner must complete the access step.", signedAt: "Signed status recorded", completedAt: "Last completed", saved: "Saved.", busy: "Saving…",
+  invalid: "Check the fields and required confirmation.", error: "Could not save. Try again.", uploadError: "The PDF could not be uploaded. Check the file and try again. An incomplete record may remain below.", pdfError: "Use a valid PDF no larger than 10 MB. Encrypted PDFs are not supported.", unsupported: "The text includes characters unsupported by the PDF font. Replace them and try again.", denied: "You do not have permission for this action.", inactive: "This company is read-only.", stale: "This record changed. Refresh the page and try again.", duplicate: "An active checklist of this kind already exists for this employee.", locked: "This record is already closed or archived.", incomplete: "The file has not finished uploading. Retry after uploading, or archive this incomplete record.", self: "You cannot revoke your own access. Another owner must do this.", linked: "Company access still exists. Link the correct account in Team, then complete the access step.", unfinished: "Finish or explicitly skip the remaining tasks first.", lastOwner: "The company must retain an owner.", back: "Back to checklists",
+};
+const ro: typeof en = {
+  title: "Documente", intro: "Fișierele angajaților, cu acces stabilit pentru fiecare document.",
+  lifecycle: "Angajare și plecare", lifecycleIntro: "Urmărește pașii necesari la venirea sau plecarea unui coleg.",
+  employee: "Angajat", search: "Caută angajați", filter: "Afișează", choose: "Selectează un angajat pentru a începe.", more: "Sunt afișați primii 50 de angajați. Restrânge lista prin căutare.",
+  none: "Nu există înregistrări.", previous: "Înapoi", next: "Înainte", titleField: "Titlu", category: "Categorie", visibility: "Vizibilitate", hr_only: "Doar HR", employeeVisible: "Angajat și HR",
+  employment: "Raport de muncă", identity: "Identitate", certificate: "Adeverință", other: "Altele",
+  upload: "Încarcă PDF", generate: "Generează PDF", file: "Fișier PDF", fileHelp: "Doar PDF, maximum 10 MB. Arhivarea păstrează fișierele; nu există ștergere automată.",
+  template: "Șablon", summary: "Fișa angajatului", letter: "Scrisoare HR", body: "Textul scrisorii", bodyHelp: "Datele angajatului și firmei se completează automat. Verifică PDF-ul înainte de partajare. Șabloanele nu reprezintă contracte sau semnături electronice.",
+  pending: "Încărcare incompletă", uploaded: "Încărcat", generated: "Generat", signed: "Semnat (consemnat de HR)", archived: "Arhivat", download: "Descarcă", finish: "Finalizează încărcarea", archive: "Arhivează", markSigned: "Consemnează semnarea", saveVisibility: "Salvează vizibilitatea", confirm: "Confirm această modificare.", signedHelp: "Consemnează un document semnat extern. Nu adaugă și nu verifică o semnătură electronică. Încarcă exemplarul semnat ca fișier nou dacă are un conținut diferit.",
+  active: "Activ", completed: "Finalizat", cancelled: "Anulat", all: "Toate", includeArchived: "Include arhivate", created: "Adăugat", state: "Stare", size: "Dimensiune", actions: "Gestionare", source: "Sursă",
+  newCase: "Pornește lista", onboarding: "Angajare", offboarding: "Plecare", target: "Data vizată", kind: "Listă de verificare", open: "Deschide lista", tasks: "Pași", todo: "De făcut", done: "Efectuat", skipped: "Omis", note: "Notă / motiv", noteHelp: "Minimum 5 caractere pentru omitere, anulare sau revocare. Include doar informațiile necesare HR.",
+  addTask: "Adaugă un pas", save: "Salvează", close: "Închide lista", closeHelp: "Finalizează după efectuarea sau omiterea explicită a tuturor pașilor. Listele închise rămân în istoric.",
+  manualHelp: "Pașii reprezintă confirmări manuale. Nu transmit în REGES, nu modifică contractele sau beneficiile și nu calculează salariile.",
+  revoke: "Revocă accesul la firmă", noAccount: "Confirmă lipsa accesului", revokeHelp: "Doar proprietarul. Elimină apartenența la această firmă și atribuirea ca manager. Contul și accesul la alte firme se păstrează. Fișierele deja descărcate nu pot fi retrase.",
+  ownerOnly: "Un proprietar al organizației trebuie să finalizeze pasul de acces.", signedAt: "Semnare consemnată", completedAt: "Ultima finalizare", saved: "Salvat.", busy: "Se salvează…",
+  invalid: "Verifică datele și confirmarea obligatorie.", error: "Salvarea a eșuat. Încearcă din nou.", uploadError: "PDF-ul nu a putut fi încărcat. Verifică fișierul și reîncearcă. O înregistrare incompletă poate rămâne în lista de mai jos.", pdfError: "Folosește un PDF valid de maximum 10 MB. PDF-urile criptate nu sunt acceptate.", unsupported: "Textul conține caractere nesuportate de fontul PDF. Înlocuiește-le și reîncearcă.", denied: "Nu ai permisiune pentru această acțiune.", inactive: "Firma permite doar citirea datelor.", stale: "Înregistrarea a fost modificată. Reîncarcă pagina și reîncearcă.", duplicate: "Există deja o listă activă de acest tip pentru angajat.", locked: "Înregistrarea este deja închisă sau arhivată.", incomplete: "Fișierul nu a fost încărcat complet. Reîncearcă după încărcare sau arhivează înregistrarea incompletă.", self: "Nu îți poți revoca propriul acces. Este necesar un alt proprietar.", linked: "Încă există acces la firmă. Asociază contul corect din Echipă, apoi finalizează pasul de acces.", unfinished: "Efectuează sau omite explicit pașii rămași.", lastOwner: "Firma trebuie să păstreze un proprietar.", back: "Înapoi la liste",
+};
+export function documentDictionary(locale: Locale) { return locale === "ro" ? ro : en; }
+export function lifecycleTaskLabel(key: string, locale: Locale) {
+  const labels: Record<string, [string, string]> = {
+    profile: ["Verifică fișa angajatului", "Review employee profile"], contract: ["Pregătește și verifică contractul", "Prepare and review contract"],
+    termination: ["Consemnează încetarea contractului", "Record contract termination"], reges: ["Verifică obligațiile REGES", "Review REGES obligations"],
+    benefits: ["Verifică beneficiile", "Review benefits"], payroll: ["Informează responsabilul de salarizare", "Notify payroll"],
+    documents: ["Verifică documentele necesare", "Review required documents"], account: ["Configurează accesul la firmă", "Set up company access"],
+    equipment: ["Confirmă predarea echipamentelor", "Confirm equipment returned"], revoke_access: ["Revocă accesul la firmă", "Revoke company access"],
+  };
+  return labels[key]?.[locale === "ro" ? 0 : 1] ?? key;
+}
