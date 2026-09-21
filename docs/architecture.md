@@ -10,6 +10,11 @@ One Next.js application and one Supabase PostgreSQL database. No microservices, 
 | `organisation_users`      | Composite organisation/user membership; role and account display details                        |
 | `employees`               | Organisation-owned directory and employment basics; optional linked account and manager         |
 | `employment_contracts`    | Organisation and employee-owned contract details, salary, status, and optional parent contract  |
+| `leave_types`             | Tenant-owned leave categories, allowance behavior and availability                              |
+| `leave_balances`          | Per-employee/type/year allowance configured by HR                                               |
+| `work_calendar_days`      | Tenant working/non-working exceptions to Monday–Friday                                          |
+| `leave_requests`          | Full-day requests, counted-date snapshot, status, decision actor/reason and version             |
+| `attendance`              | Per-employee/day planned/worked hours, absence category, last editor and version                |
 | `audit_log`               | Append-only organisation-owned action history written by trusted triggers/functions             |
 | `private.platform_admins` | Operator-provisioned global platform identities, with no implicit HR access                     |
 
@@ -51,9 +56,21 @@ Suspension preserves role-scoped reads while restrictive write policies and trig
 
 Employee/contract triggers write actor, organisation, action, entity, timestamp, and changed field names. Salary updates have their own action. Raw salaries and personal values are not duplicated in audit metadata. Organisation and membership functions also log changes. API callers cannot forge, modify, or delete audit events.
 
+## Leave and attendance
+
+All five time tables have tenant foreign keys and RLS. Employee-specific data follows `can_read_employee`: HR/owner sees the tenant, managers their assigned staff plus themselves, and linked employees themselves. Types/calendar are tenant-wide. Superadmins gain no implicit HR access. Authenticated callers have SELECT only; every write uses a checked RPC deriving author/tenant from the session.
+
+Time mutations lock the organisation row, require active status and serialize allowance changes, requests, calendar changes, decisions and attendance. This prevents concurrent requests exceeding balances or creating overlap and coordinates with suspension/blocking. Decisions and attendance additionally compare submitted versions to reject stale edits.
+
+Requests snapshot working dates when submitted and stay within one calendar year. Approved and pending days both reserve allowance; cancellation/rejection releases it. Changing working status on a date covered by a pending/approved request is refused. Leave type category/balance behavior is immutable after creation; names and availability can change. No statutory entitlement is inferred.
+
+`attendance_month` checks employee access and combines daily entries, calendar defaults and approved leave; it never reads salary. A missing record has nullable worked hours and is not counted as worked. Approved leave overlays an entire working day. Approval rejects conflicting attendance; saving attendance on approved leave is refused. `leave_calendar` aggregates the full permitted month under RLS, independent of the 25-row request list.
+
+Linked employees submit their own requests; HR may submit for others. HR/owners and assigned managers review others' requests. Self approval/rejection is prohibited. Employees cancel their pending requests; HR can cancel pending/approved ones. Reason fields are employee-visible and must not contain medical details. Audit stores actor/action/entity and changed field names rather than duplicating notes or personal values.
+
 ## Future additions
 
-Add each module with its own migration, organisation foreign key, policies, actions, and UI. Leave balances, attendance, benefits, protected Storage documents, workflow checklists, and provider adapters are intentionally absent until their phase. Integration secrets will need a server-only encrypted storage design and key lifecycle before any credentials are accepted. A normal PostgreSQL submission table can support REGES status tracking when required; successful provider calls must never be simulated in production.
+Add each module with its own migration, organisation foreign key, policies, actions, and UI. Benefits, protected Storage documents, workflow checklists, and provider adapters are intentionally absent until their phase. Integration secrets will need a server-only encrypted storage design and key lifecycle before any credentials are accepted. A normal PostgreSQL submission table can support REGES status tracking when required; successful provider calls must never be simulated in production.
 
 ## Current limits
 

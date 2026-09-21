@@ -2004,6 +2004,234 @@ td,
     gap: 5px;
   }
 }
+.time-actions,
+.time-filters,
+.time-tabs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.time-filters {
+  align-items: flex-end;
+  margin: 22px 0 12px;
+}
+.time-filters > .field {
+  flex: 1;
+  min-width: 155px;
+}
+.time-filters input,
+.time-filters select {
+  width: 100%;
+}
+.time-field > span {
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.time-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.time-form textarea,
+.time-filters input,
+.time-filters select {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  min-height: 42px;
+}
+.time-form textarea {
+  width: 100%;
+  resize: vertical;
+}
+.time-form-card {
+  max-width: 740px;
+  padding: 28px;
+}
+.time-help {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 12px 0 22px;
+}
+.time-padding {
+  padding: 24px;
+}
+.time-section {
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.time-tabs {
+  border-bottom: 1px solid var(--line);
+  margin: 26px 0 20px;
+  gap: 28px;
+}
+.time-tabs a {
+  padding: 12px 0;
+  color: var(--muted);
+}
+.time-tabs a[aria-current="page"] {
+  color: var(--brand);
+  border-bottom: 2px solid var(--brand);
+  font-weight: 600;
+}
+.time-status {
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.time-pending {
+  color: #885c00;
+  background: #fff5da;
+}
+.time-approved {
+  color: #197146;
+  background: #edf8f1;
+}
+.time-rejected {
+  color: #b52e36;
+  background: #fff0f1;
+}
+.time-cancelled {
+  color: var(--muted);
+  background: var(--background);
+}
+.time-subline {
+  display: block;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.time-decision-note {
+  max-width: 230px;
+  margin-top: 10px;
+  font-size: 0.8rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.time-review summary,
+.time-setting-row summary {
+  cursor: pointer;
+  color: var(--brand);
+  font-weight: 500;
+}
+.time-review[open] {
+  width: 300px;
+  white-space: normal;
+}
+.time-review form {
+  margin-top: 15px;
+}
+.time-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.time-setting-row {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 12px;
+}
+.time-setting-row form {
+  margin-top: 20px;
+}
+.attendance-totals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 24px 0;
+}
+.attendance-totals .card {
+  padding: 18px;
+}
+.attendance-totals span {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.attendance-totals strong {
+  display: block;
+  font-size: 1.65rem;
+  margin-top: 6px;
+}
+.leave-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  padding: 0 20px 20px;
+  gap: 6px;
+}
+.calendar-weekday {
+  font-size: 0.8rem;
+  text-align: center;
+  color: var(--muted);
+  padding: 10px 0;
+}
+.calendar-day {
+  min-height: 100px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.calendar-day strong {
+  display: block;
+  margin-bottom: 8px;
+}
+.calendar-day span,
+.calendar-day small {
+  display: block;
+  font-size: 0.7rem;
+  overflow-wrap: anywhere;
+}
+.calendar-day.has-leave {
+  background: var(--brand-soft);
+  border-color: #cbd9ff;
+}
+.pending-leave-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+.pending-leave-card div {
+  flex: 1;
+}
+.pending-leave-card small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+@media (max-width: 760px) {
+  .time-settings-grid {
+    grid-template-columns: 1fr;
+  }
+  .attendance-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .time-padding,
+  .time-form-card {
+    padding: 20px;
+  }
+  .leave-calendar {
+    gap: 3px;
+    padding: 0 8px 12px;
+  }
+  .calendar-day {
+    min-height: 85px;
+    padding: 5px;
+  }
+  .calendar-day span,
+  .calendar-day small {
+    font-size: 0.62rem;
+  }
+  .time-actions .button {
+    font-size: 0.8rem;
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

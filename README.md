@@ -12,9 +12,11 @@ A white-label HR workspace for Romanian companies. Next.js App Router, strict Ty
 - Employee directory with search, filters and pagination; creation, editing, profiles, and manager assignment.
 - Contract creation/editing, statuses, fixed/indefinite terms, salary storage, and the database relationship for future addenda.
 - Owner-managed access for existing confirmed accounts, including linking a user to an employee record.
-- Automatic audit events for organisation, membership, employee, contract, and salary changes.
+- Full-day leave requests, manager/HR approvals, calendar/list views, yearly allowances and configurable leave types/work calendar.
+- Daily planned/worked hours and absence records, monthly attendance totals and automatic approved-leave integration.
+- Automatic audit events for organisation, membership, employee, contract, salary, leave and attendance changes.
 
-Leave, attendance, benefits, documents, REGES, onboarding checklists, and external provider integrations are later phases. Navigation labels explicitly identify planned modules. There is no payroll calculation, provider submission, mock integration, or production demo dataset.
+Benefits, documents, REGES, onboarding checklists, and external provider integrations are later phases. Navigation labels identify planned modules. There is no payroll calculation, provider submission, mock integration, or production demo dataset.
 
 ## Local development
 
@@ -82,6 +84,18 @@ Access states are independent of employee and contract statuses:
 
 Every status transition requires a reason and UI confirmation; the reason is visible to members. Database policies and write guards enforce restrictions on direct API calls as well as the interface. Row locks serialize access changes with writes; version checks prevent stale Superadmin forms from overwriting newer organisation changes. Restoration retains all records. Organisation audit history records actors, changed field names, status transitions and reasons; the overview shows the latest 10 organisation events, never employee or salary history.
 
+## Leave and attendance setup
+
+1. Apply `202609200004_leave_attendance.sql` before deploying the new screens. It adds the time tables and seeds annual, medical and unpaid leave types for each organisation; it does not create employee records or allowances.
+2. Under **Leave → Leave settings**, HR or an owner enters each employee's yearly allowance, including any agreed carryover. Approved and pending requests reserve days. No statutory entitlement or accrual is calculated automatically.
+3. Configure holidays and company exceptions before requesting leave. The default working week is Monday–Friday; public holidays are not automatically imported. Requests use full working days within one year. Split periods that cross New Year.
+4. Linked employees request their own leave; HR/owners can submit for employees. HR/owners or the assigned manager approve/reject, but cannot approve their own leave. A second approver is needed for an owner's own request. Employees can cancel their pending requests; HR/owners can also cancel approved requests. Rejection/cancellation requires a reason visible to the employee.
+5. In **Attendance**, select an employee and month. HR/owners or the assigned manager enter daily planned/worked hours or a full-day absence. Working dates default to 8 planned hours, editable per date. Unrecorded days are not assumed worked. Employees can read their own records.
+
+Approved leave fills attendance automatically. Conflicting recorded work/absence or a zero-hour plan prevents approval; correct that day first. Approved leave must be cancelled before editing its attendance dates. Calendar changes affecting pending/approved leave require cancelling and resubmitting those requests. The calendar shows counts across all permitted requests, independent of list pagination.
+
+There is no clock-in/out, per-employee recurring schedule, half-day leave, automatic accrual, payroll engine or medical-document storage in this version. Do not enter diagnoses or medical details in decision reasons. The same tenant isolation, suspension/blocking and Superadmin boundaries apply to both modules.
+
 ## Auth email configuration
 
 In Supabase Authentication → URL Configuration, use the exact application origin as the Site URL. Allow:
@@ -108,7 +122,7 @@ Branding is deployment-wide in this MVP. Each tenant has its own organisation na
 
 ```text
 src/app/(auth)/             Authentication screens
-src/app/(workspace)/        Protected dashboard, employees, contracts and settings
+src/app/(workspace)/        Protected dashboard, employees, contracts, leave, attendance and settings
 src/app/platform/           Membership-independent Superadmin pages and mutations
 src/app/organisation-access/ Blocked-workspace explanation and organisation switching
 src/app/actions.ts          Validated and authorised server mutations
@@ -133,9 +147,10 @@ npm run build
 npx supabase db lint --linked --level warning
 npx supabase db query --linked --file tests/live-rls-smoke.sql
 npx supabase db query --linked --file tests/live-platform-smoke.sql
+npx supabase db query --linked --file tests/live-time-smoke.sql
 ```
 
-The 20-test suite runs all migrations in an embedded PostgreSQL engine (PGlite) with realistic Supabase auth roles. It checks cross-tenant reads/writes, foreign-key tenant constraints, salary access, self-promotion, account linking, immutable audit records, final-owner protection, platform boundaries, organisation access states, restoration and stale updates. Both live SQL smoke checks use temporary records inside transactions and roll everything back, including auth users and audit rows.
+The test suite runs all migrations in an embedded PostgreSQL engine (PGlite) with realistic Supabase auth roles. It checks cross-tenant reads/writes, foreign-key tenant constraints, salary access, self-promotion, account linking, immutable audit records, final-owner protection, platform boundaries, organisation access states, restoration and stale updates. Time-module checks cover balances, overlaps, working-day snapshots, approval rights, attendance conflicts, date validation and monthly totals. All three live SQL smoke checks use temporary records inside transactions and roll everything back, including auth users and audit rows.
 
 ## Vercel deployment
 

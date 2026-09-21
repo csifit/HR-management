@@ -425,7 +425,24 @@ export function actionLabel(action: string, locale: Locale) {
     "salary.changed": ["Salariu actualizat", "Salary updated"],
     "organisation.created": ["Organizație creată", "Organisation created"],
     "organisation.updated": ["Organizație actualizată", "Organisation updated"],
-    "organisation.status_changed": ["Acces la organizație schimbat", "Organisation access changed"],
+    "organisation.status_changed": [
+      "Acces la organizație schimbat",
+      "Organisation access changed",
+    ],
+    "leave.requested": ["Concediu solicitat", "Leave requested"],
+    "leave.approved": ["Concediu aprobat", "Leave approved"],
+    "leave.rejected": ["Concediu respins", "Leave rejected"],
+    "leave.cancelled": ["Concediu anulat", "Leave cancelled"],
+    "leave.balance_updated": [
+      "Sold concediu actualizat",
+      "Leave allowance updated",
+    ],
+    "leave.type_updated": ["Tip concediu actualizat", "Leave type updated"],
+    "calendar.updated": [
+      "Calendar de lucru actualizat",
+      "Work calendar updated",
+    ],
+    "attendance.saved": ["Pontaj salvat", "Attendance saved"],
     "membership.updated": ["Acces actualizat", "Access updated"],
   };
   return labels[action]?.[locale === "ro" ? 0 : 1] ?? action;

@@ -8,6 +8,7 @@ import {
   ArrowRight,
   Sparkles,
   History,
+  CalendarDays,
 } from "lucide-react";
 import { requireOrganisation } from "@/lib/auth";
 import { getLocale } from "@/lib/locale";
@@ -15,13 +16,15 @@ import { dictionary, dateLabel, actionLabel } from "@/lib/i18n";
 import { canManage } from "@/lib/types";
 import { PageHeader, Metric, EmptyState } from "@/components/ui";
 import { EmployeeTable } from "@/components/employee-table";
+import { timeDictionary } from "@/lib/time-i18n";
 export default async function DashboardPage() {
   const { supabase, organisation, membership } = await requireOrganisation();
   const locale = await getLocale();
   const d = dictionary(locale);
+  const td = timeDictionary(locale);
   const manage = canManage(membership.role);
   const writable = manage && organisation.status === "active";
-  const [summary, recent, activity] = await Promise.all([
+  const [summary, recent, activity, pendingLeave] = await Promise.all([
     supabase.rpc("dashboard_summary", { p_organisation_id: organisation.id }),
     supabase
       .from("employees")
@@ -35,8 +38,19 @@ export default async function DashboardPage() {
       .eq("organisation_id", organisation.id)
       .order("created_at", { ascending: false })
       .limit(5),
+    supabase
+      .from("leave_requests")
+      .select("id", { count: "exact", head: true })
+      .eq("organisation_id", organisation.id)
+      .eq("status", "pending"),
   ]);
-  if (summary.error || !summary.data || recent.error || activity.error)
+  if (
+    summary.error ||
+    !summary.data ||
+    recent.error ||
+    activity.error ||
+    pendingLeave.error
+  )
     throw new Error("Dashboard could not be loaded.");
   const stats = summary.data;
   const departmentTotal = stats.departments.reduce(
@@ -96,6 +110,15 @@ export default async function DashboardPage() {
           </>
         )}
       </div>
+      <Link className="card pending-leave-card" href="/leave?status=pending">
+        <CalendarDays size={22} />
+        <div>
+          <strong>{td.pendingTitle}</strong>
+          <small>{td.pendingCaption}</small>
+        </div>
+        <span className="count-badge">{pendingLeave.count ?? 0}</span>
+        <ArrowRight size={18} />
+      </Link>
       <div className="dashboard-grid">
         <section className="card table-card">
           <div className="card-heading">
@@ -190,7 +213,7 @@ export default async function DashboardPage() {
         </span>
         <div>
           <h3>{d.upcomingModules}</h3>
-          <p>{d.upcomingBody}</p>
+          <p>{td.upcoming}</p>
         </div>
         <span className="roadmap-tag">{d.planned}</span>
       </div>

@@ -9,6 +9,18 @@ import type {
   PlatformOrganisation,
   OrganisationStatus,
 } from "./types";
+import type {
+  LeaveType,
+  LeaveBalance,
+  CalendarDay,
+  LeaveRequest,
+  Attendance,
+  LeaveCategory,
+  LeaveStatus,
+  AttendanceAbsence,
+  BalanceSummary,
+  AttendanceDay,
+} from "./time-types";
 type Table<Row> = {
   Row: Row;
   Insert: Partial<Row>;
@@ -24,9 +36,88 @@ export type Database = {
       employees: Table<Employee>;
       employment_contracts: Table<Contract>;
       audit_log: Table<AuditEntry>;
+      leave_types: Table<LeaveType>;
+      leave_balances: Table<LeaveBalance>;
+      work_calendar_days: Table<CalendarDay>;
+      leave_requests: Table<LeaveRequest>;
+      attendance: Table<Attendance>;
     };
     Views: Record<string, never>;
     Functions: {
+      leave_calendar: {
+        Args: { p_org: string; p_month: string; p_employee: string | null };
+        Returns: { day: string; pending: number; approved: number }[];
+      };
+      request_leave: {
+        Args: {
+          p_org: string;
+          p_employee: string;
+          p_type: string;
+          p_start: string;
+          p_end: string;
+        };
+        Returns: string;
+      };
+      decide_leave: {
+        Args: {
+          p_org: string;
+          p_id: string;
+          p_version: number;
+          p_status: LeaveStatus;
+          p_note: string;
+        };
+        Returns: undefined;
+      };
+      save_leave_type: {
+        Args: {
+          p_org: string;
+          p_id: string | null;
+          p_name: string;
+          p_category: LeaveCategory;
+          p_deducts: boolean;
+          p_active: boolean;
+        };
+        Returns: undefined;
+      };
+      save_leave_allowance: {
+        Args: {
+          p_org: string;
+          p_employee: string;
+          p_type: string;
+          p_year: number;
+          p_allowance: number;
+        };
+        Returns: undefined;
+      };
+      save_calendar_day: {
+        Args: {
+          p_org: string;
+          p_day: string;
+          p_working: boolean;
+          p_label: string;
+        };
+        Returns: undefined;
+      };
+      save_attendance: {
+        Args: {
+          p_org: string;
+          p_employee: string;
+          p_day: string;
+          p_planned: number;
+          p_worked: number;
+          p_absence: AttendanceAbsence;
+          p_version: number | null;
+        };
+        Returns: undefined;
+      };
+      leave_balance_summary: {
+        Args: { p_org: string; p_employee: string; p_year: number };
+        Returns: BalanceSummary[];
+      };
+      attendance_month: {
+        Args: { p_org: string; p_employee: string; p_month: string };
+        Returns: AttendanceDay[];
+      };
       platform_organisation_list: {
         Args: { p_search: string; p_status: string; p_page: number };
         Returns: { total: number; organisations: PlatformOrganisation[] };
@@ -87,7 +178,13 @@ export type Database = {
         Returns: Pick<Organisation, "id" | "name" | "cui" | "created_at">[];
       };
     };
-    Enums: { organisation_role: Role; organisation_status: OrganisationStatus };
+    Enums: {
+      organisation_role: Role;
+      organisation_status: OrganisationStatus;
+      leave_category: LeaveCategory;
+      leave_status: LeaveStatus;
+      attendance_absence: AttendanceAbsence;
+    };
     CompositeTypes: Record<string, never>;
   };
 };

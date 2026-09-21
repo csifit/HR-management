@@ -1,4 +1,32 @@
-# Safe checkpoint — 20 September 2026
+# Safe checkpoint — 21 September 2026
+
+## Current: Phase 3 leave and attendance
+
+This section supersedes the historical notes below. The user requested leave/attendance and chose **daily records + leave approvals**, not clock-in/out. Keep verification focused to conserve usage; the user offered to run further commands themselves.
+
+- Implemented `/leave`, `/leave/new`, `/leave/settings`, `/attendance` and `/attendance/edit`, with Romanian/English strings, sidebar links, employee-profile links and a pending-leave dashboard card.
+- Annual, medical and unpaid types are seeded by the new migration. HR can create other types and rename/disable existing ones. Category and allowance behavior are immutable to preserve history.
+- Linked employees request their own full working days; HR/owners can submit for staff. HR/owners or assigned managers approve/reject others' requests; self approval is denied. Employee cancellation is limited to pending requests; HR/owners can cancel approved leave too. Rejection/cancellation requires a reason.
+- Yearly allowances are entered by HR, including agreed carryover. Pending and approved requests reserve balance. Requests snapshot working dates, reject overlaps and stay within one calendar year. Default calendar is Monday–Friday; HR must enter public holidays and company exceptions. No automatic statutory entitlement/accrual or holiday import is claimed.
+- HR/owners and assigned managers record daily planned/worked hours and full-day absence categories. Default plan is 8 hours per working day, editable per date. Missing records are not counted as worked. Approved leave flows into monthly attendance and conflicting records are rejected. No payroll, clock-in/out, half-day leave or recurring employee schedules.
+- All time tables have tenant RLS and checked write RPCs. Organisation locking coordinates reservations/decisions/calendar/attendance with suspension/blocking. Decision/attendance versions reject stale edits. Superadmin does not bypass employee access. Audit records actor/action and changed field names, without copying decision notes.
+- Added `supabase/migrations/202609200004_leave_attendance.sql`, the time components/types/validation/actions, `tests/time-workflows.test.mjs`, and `tests/live-time-smoke.sql`. Updated README, architecture and roadmap with setup instructions and limits.
+- Validation: full 28-test suite passed; after adding the live rollback-script test, all 9 focused time tests passed (20 existing + 9 time tests now present). ESLint and production build passed. Final small UI fixes preserve form values after errors and let managers request their own leave while viewing assigned staff; TypeScript passed again after these fixes. `git diff --check` passed. No reason to rerun all prior checks merely on resume.
+- **Migration 4 is now applied remotely.** The user reconnected the CLI and replied ready. Migration listing confirmed project `mlgnmdhfhybhzzcoxmtr` had only migration 4 pending; `npx supabase db push --linked --yes` applied it successfully. The earlier 403 is resolved.
+- Supabase schema lint found no errors. `tests/live-time-smoke.sql` passed against the linked database for balances, working dates, self-approval rejection, assigned-manager approval, attendance projection/conflicts, stale updates, tenant isolation and audit. All smoke-test fixtures were rolled back. The same script had already passed locally in PGlite with rollback verification.
+- Git was clean at the start of this phase at `6bfee14` (`superadmin??`), so previous Superadmin work is now committed. Phase 3 files remain local and uncommitted. No commit, push or Vercel deployment was made. The development server is running at `http://localhost:3000` (exec session `31465`).
+- Browser navigation to `/leave` correctly redirected to `/login`: the local session needs a fresh sign-in. The user chose **“I'll check the screens myself”**. The preview is left open for their manual check; do not ask for sign-in again or repeat UI checks unless requested. No authenticated Phase 3 browser check was performed by the agent.
+- No real tenant employee, allowance, calendar or attendance records were changed. Preserve Cozumel SRL and the owner's confirmed account. Migration setup added only the default leave types to existing tenants.
+
+### Resume from here
+
+1. Read current Git status and any results from the user's manual screen check; preserve intervening changes. Database migration and live checks are complete; do not repeat them without a relevant change.
+2. The user is checking `/leave`, calendar/settings/request screens and `/attendance` themselves. The local server is running; restart `npm run dev` only if needed. Stop dev before any build to avoid generated-route conflicts. Never ask for a password or suspend/block the real company to test.
+3. Address any issue the user reports. The owner must configure real allowances and holidays/company exceptions before using leave requests.
+4. The owner can commit/push for Vercel deployment when ready. The required database migration is already in place, but the Phase 3 frontend is not yet deployed.
+5. Benefits is the next roadmap phase; Stripe/trials remain separate requirements below. Do not begin them without the user's next direction.
+
+## Historical checkpoint — 20 September 2026
 
 Work originally paused at the user's request to conserve remaining usage. Core signed-in checks are complete. The user then requested Expanded Superadmin controls and confirmed continuation.
 

@@ -66,6 +66,8 @@ export function AppShell({
     ...(membership.role !== "manager"
       ? [{ href: "/contracts", label: d.contracts, icon: Files }]
       : []),
+    { href: "/leave", label: d.leave, icon: CalendarDays },
+    { href: "/attendance", label: d.attendance, icon: Clock3 },
   ];
   const current = path.startsWith("/settings/team")
     ? d.team
@@ -143,8 +145,6 @@ export function AppShell({
           ))}
           <span className="nav-section-label next-section">{d.comingNext}</span>
           {[
-            { label: d.leave, icon: CalendarDays },
-            { label: d.attendance, icon: Clock3 },
             { label: d.benefits, icon: Gift },
             { label: d.documents, icon: FolderClosed },
             { label: d.integrations, icon: Plug },

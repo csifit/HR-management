@@ -118,6 +118,10 @@ export default async function EmployeePage({
                 {d[key]}
               </Link>
             ))}
+          <Link href={`/leave?employee=${employee.id}`}>{d.leave}</Link>
+          <Link href={`/attendance?employee=${employee.id}`}>
+            {d.attendance}
+          </Link>
         </nav>
       </section>
       {tab === "personal" && (

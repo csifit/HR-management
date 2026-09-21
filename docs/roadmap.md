@@ -14,7 +14,9 @@ Later expansion within this phase: employee invitation emails, membership remova
 
 ## Phase 3 — Leave and attendance
 
-Annual, medical, unpaid and configurable leave types; balances; manager/HR decisions; calendar/list view; working/worked days and absence categories. No payroll engine.
+Implemented: full-day annual, medical, unpaid and configurable leave types; manually configured yearly allowances with approved/pending/available totals; employee requests, manager/HR decisions without self approval, cancellation, calendar/list views; daily planned/worked hours, monthly totals and absence categories. Approved leave appears automatically in attendance. Working calendar exceptions, audit, tenant boundaries and access-state enforcement are included.
+
+Setup requires HR to configure yearly allowances and public holidays/company exceptions. The base schedule is Monday–Friday, 8 planned hours per working day, editable per date. No clock-in/out, partial-day leave, recurring employee schedules, automatic legal accrual or payroll engine. Future enhancements can add these after their rules are agreed.
 
 ## Phase 4 — Benefits
 
