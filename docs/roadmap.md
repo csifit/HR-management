@@ -26,7 +26,7 @@ The user approved manual HR review for mid-month changes, recorded-worked-day co
 
 ## Phase 5 — Documents and lifecycle
 
-Implemented locally: tenant-protected PDF Storage, metadata/statuses, summary/letter/payslip generation, own-employee visibility, archival, onboarding/offboarding checklists and owner-only scoped access revocation. MXroute delivery has explicit recipient review and attempt tracking; provider authentication is pending. Signature abstraction remains unavailable. Archive retains data; automatic erasure/retention workflows and real signing remain future work. Consult the checkpoint for live migration/Storage/UI verification status.
+Implemented: tenant-protected PDF Storage, metadata/statuses, summary/letter/payslip generation, own-employee visibility, archival, onboarding/offboarding checklists and owner-only scoped access revocation. MXroute delivery has explicit recipient review and attempt tracking; local connection/TLS/authentication passed a verify-only check. Vercel configuration and actual delivery remain unverified. Signature abstraction remains unavailable. Archive retains data; automatic erasure/retention workflows and real signing remain future work. Consult the checkpoint for live migration/Storage/UI verification status.
 
 ## Phase 6 — REGES integration framework
 
@@ -34,14 +34,14 @@ Implemented locally: owner-managed employer/author identifiers and a clearly dis
 
 ## Phase 7 — Payroll and accounting
 
-The user explicitly requested an in-app payroll calculator. Implemented locally: effective-dated standard full-time/full-month 2026 CAS/CASS/income-tax and deduction calculations, net pay and printable private payslips. Eligibility is supplied by HR and the current contract is checked before generation. See `payroll-rules.md` for precise supported facts and sources.
+The user explicitly requested an in-app payroll calculator. Implemented locally: effective-dated full-month 2026 CAS/CASS/income-tax and deduction calculations, net pay and printable private payslips. The selected expansion adds part-time contribution floors/evidenced exceptions, declared meal vouchers and paid salary advances. HR confirms eligibility and issuance; the current contract, hours and salary are checked before generation. See `payroll-rules.md` for precise supported facts, whole-RON limits and sources.
 
-Remaining: accountant reference validation, partial months and leave pay, part-time floors/exceptions, benefits/vouchers, exemptions, other deductions, corrections/payroll ledger, D112 and accounting exports/adapters. No bank payment execution. Broader payroll coverage must be added as tested, versioned rules, never inferred silently.
+Remaining: accountant reference validation, fractional-leu earnings, partial months and leave pay, other benefits, income-tax exemptions, other deductions, corrections/payroll ledger, D112 and accounting exports/adapters. No bank payment execution. Broader payroll coverage must be added as tested, versioned rules, never inferred silently.
 
 ## Security, privacy, discovery and subscriptions
 
-Optional TOTP MFA for every role is implemented locally with database/Storage enforcement once enrolled. Production provider flows and recovery procedures still need verification. Data-protection controls and an operational assessment are included; operator notices, contracts, retention/rights and incident procedures remain prerequisites for a compliance claim.
+Optional TOTP MFA for every role is implemented with database/Storage enforcement once enrolled. Production provider flows and recovery procedures still need verification. Cozumel SRL is identified as provider. The privacy pack now includes a draft customer DPA, provider handbook, vendor register and restricted-register templates for rights, incidents, support and service exit. These need legal/operational completion and adoption; notices, actual retention/export/erasure processes, verified vendor terms and tested backup/restoration remain outstanding.
 
-A public Romanian product page is indexable through its sitemap and has no inbound navigation/footer links. Search placement is not guaranteed. Stripe subscriptions are proposed at €2 per billable employee/month, one company payment and a 30-day trial; count/trial/VAT/grace rules must be finalised before building or charging.
+A public Romanian product page is indexable through its sitemap and has no inbound navigation/footer links. Search placement is not guaranteed. Stripe collections are proposed at €2 per billable employee/month, one company payment and a 30-day trial. The user will issue official invoices in SAGA. The billing proposal explains variable subscription quantities, internal Stripe Billing invoice records and SAGA reconciliation; count/trial/VAT/currency/grace rules must be finalised before building or charging.
 
 Deployment target: Vercel. GitHub repository creation is managed by the project owner.

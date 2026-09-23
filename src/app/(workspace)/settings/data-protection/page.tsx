@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireHR } from "@/lib/auth";
 import { getLocale } from "@/lib/locale";
 import { PageHeader } from "@/components/ui";
+import { serviceProvider } from "@/lib/service-provider";
 export default async function DataProtectionPage() {
   await requireHR();
   const ro = (await getLocale()) === "ro";
@@ -50,6 +51,32 @@ export default async function DataProtectionPage() {
           ? "Controalele aplicației sprijină protecția datelor. Conformitatea GDPR necesită și documente, decizii și proceduri ale organizației; nu este o certificare automată."
           : "Application controls support data protection. GDPR compliance also requires organisational documents, decisions and procedures; this is not an automatic certification."}
       </p>
+      <section className="card time-form-card">
+        <h2>
+          {ro
+            ? "Organizația și furnizorul serviciului"
+            : "Your organisation and the service provider"}
+        </h2>
+        <p>
+          <strong>{serviceProvider.name}</strong> · {serviceProvider.address}
+        </p>
+        <p>
+          {ro ? "Contact pentru protecția datelor" : "Data-protection contact"}:{" "}
+          <a href={`mailto:${serviceProvider.privacyEmail}`}>
+            {serviceProvider.privacyEmail}
+          </a>
+        </p>
+        <p>
+          {ro
+            ? "Pentru evidențele HR, organizația stabilește scopurile și temeiurile prelucrării și este, de regulă, operator. Furnizorul prelucrează datele conform instrucțiunilor documentate, ca persoană împuternicită. Contractul de prelucrare, furnizorii secundari și termenele de păstrare trebuie convenite separat."
+            : "For HR records, your organisation determines purposes and legal bases and ordinarily acts as controller. The provider processes them on documented instructions as processor. The processing agreement, subprocessors and retention terms must be agreed separately."}
+        </p>
+        <p>
+          {ro
+            ? "Furnizorul are obligații proprii privind confidențialitatea, securitatea, asistența pentru drepturi și incidente, subcontractarea și returnarea/ștergerea datelor. Pentru propriile activități de facturare și administrare a conturilor, poate avea separat rol de operator."
+            : "The provider has its own confidentiality, security, rights/incident assistance, subcontracting and data return/deletion duties. It may separately act as controller for its own billing and account administration."}
+        </p>
+      </section>
       <div className="time-settings-grid">
         <section className="card time-form-card">
           <h2>{ro ? "Controale în aplicație" : "Application controls"}</h2>
@@ -83,6 +110,40 @@ export default async function DataProtectionPage() {
           </a>
         </section>
       </div>
+      <section className="card time-form-card">
+        <h2>
+          {ro
+            ? "Procedură pentru solicitările persoanelor"
+            : "Procedure for individual requests"}
+        </h2>
+        <ol className="integration-steps">
+          <li>
+            {ro
+              ? "Înregistrează data primirii, tipul solicitării, organizația și un responsabil. Păstrează evidența într-un sistem cu acces limitat."
+              : "Record the receipt date, request type, organisation and responsible person in a restricted operational register."}
+          </li>
+          <li>
+            {ro
+              ? "Verifică proporțional identitatea și stabilește termenul: de regulă o lună calendaristică. O prelungire justificată trebuie comunicată în termenul inițial."
+              : "Verify identity proportionately and track the normal one-calendar-month response deadline. Communicate any justified extension within the initial deadline."}
+          </li>
+          <li>
+            {ro
+              ? "Organizația decide asupra evidențelor HR; furnizorul oferă asistență pe baza instrucțiunilor verificate. Verifică datele altor persoane și obligațiile de păstrare înainte de export sau ștergere."
+              : "The organisation decides requests concerning its HR records; the provider assists on verified instructions. Check other people's data and retention duties before export or deletion."}
+          </li>
+          <li>
+            {ro
+              ? "Comunică răspunsul securizat și înregistrează rezultatul, motivele și data. Descărcarea unui PDF nu este un export complet al datelor, iar arhivarea nu este ștergere."
+              : "Deliver the response securely and record its outcome, reasons and date. Downloading one PDF is not a complete data export, and archiving is not erasure."}
+          </li>
+        </ol>
+        <p className="time-help">
+          {ro
+            ? "La un incident, contactează imediat responsabilul și furnizorul. Persoana împuternicită notifică operatorul fără întârzieri nejustificate; nu are automat 72 de ore la dispoziție. Operatorul evaluează notificările către autoritate și persoanele afectate."
+            : "For an incident, contact the responsible person and provider promptly. A processor notifies the controller without undue delay; it does not automatically have 72 hours. The controller assesses authority and individual notifications."}
+        </p>
+      </section>
     </>
   );
 }

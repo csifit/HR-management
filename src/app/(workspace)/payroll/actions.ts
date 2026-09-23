@@ -14,7 +14,7 @@ import { DOCUMENT_BUCKET } from "@/lib/document-types";
 import type { ActionState } from "@/lib/types";
 const schema = z.intersection(
   payrollSchema,
-  z.object({ employee_id: z.uuid() }),
+  z.object({ employee_id: z.uuid(), benefits_reviewed: z.literal("on") }),
 );
 export async function generatePayslip(
   _s: ActionState,
@@ -30,7 +30,7 @@ export async function generatePayslip(
     monthEnd = new Date(Date.UTC(2026, Number(v.month.slice(5)), 0))
       .toISOString()
       .slice(0, 10);
-  const [employee, contracts, leave, benefits, attendance] = await Promise.all([
+  const [employee, contracts, leave, attendance] = await Promise.all([
     c.supabase
       .from("employees")
       .select("*")
@@ -53,14 +53,6 @@ export async function generatePayslip(
       .lte("start_date", monthEnd)
       .gte("end_date", monthStart),
     c.supabase
-      .from("employee_benefits")
-      .select("id", { count: "exact", head: true })
-      .eq("organisation_id", c.organisation.id)
-      .eq("employee_id", v.employee_id)
-      .eq("active", true)
-      .lte("starts_on", monthEnd)
-      .or(`ends_on.is.null,ends_on.gte.${monthStart}`),
-    c.supabase
       .from("attendance")
       .select("id", { count: "exact", head: true })
       .eq("organisation_id", c.organisation.id)
@@ -69,13 +61,7 @@ export async function generatePayslip(
       .lte("day", monthEnd)
       .neq("absence", "none"),
   ]);
-  if (
-    employee.error ||
-    contracts.error ||
-    leave.error ||
-    benefits.error ||
-    attendance.error
-  )
+  if (employee.error || contracts.error || leave.error || attendance.error)
     return { error: d.mismatch, values: p.values };
   const e = employee.data,
     contract = contracts.data[0];
@@ -87,11 +73,10 @@ export async function generatePayslip(
     contract.status !== "active" ||
     contract.start_date > monthStart ||
     (contract.end_date && contract.end_date < monthEnd) ||
-    contract.working_hours !== 8 ||
+    Number(contract.working_hours) !== v.hours ||
     Number(contract.gross_salary) !== v.basic ||
     contract.currency !== "RON" ||
     (leave.count ?? 0) > 0 ||
-    (benefits.count ?? 0) > 0 ||
     (attendance.count ?? 0) > 0
   )
     return { error: d.mismatch, values: p.values };

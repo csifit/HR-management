@@ -4,6 +4,10 @@ This is an implementation assessment and launch checklist, not a certification o
 
 ## Responsibilities and inventory
 
+Confirmed service operator: **Cozumel SRL**, Str. Dr. Louis Pasteur nr 38/ ap. 31, 410154, Oradea, jud. Bihor; privacy contact **admin@mkdir.space**. Its company/tax registration details, named privacy lead/deputy and operational commitments still need completion. The product brand remains separate from this legal identity.
+
+The [provider handbook](privacy/provider-handbook.md), [customer DPA draft](privacy/customer-dpa-draft.md), [vendor register](privacy/subprocessors.md) and [operations-register templates](privacy/operations-register.md) turn the requirements below into working procedures. They are drafts for review/adoption, not signed agreements or evidence that every listed control is operating. Keep completed registers containing personal data outside Git.
+
 For customer HR processing, the employer will ordinarily determine purposes and act as controller, with the service operator processing on documented instructions. The operator may have separate controller responsibilities for account administration/billing. Confirm the actual arrangements in contracts rather than assuming one role for every activity.
 
 The application stores employee contact/employment records, contract salaries, leave categories, attendance, benefits, documents, audit records and delivery metadata. Leave/documents may contain sensitive information: minimize what is collected, avoid diagnoses in free text and limit document visibility. Payroll eligibility is recorded as calculation inputs/counts; children's identifying details are not needed for the current calculator. Supabase holds database/auth/private files; Vercel runs the app; MXroute carries explicitly emailed employee documents. Stripe is proposed, not connected. REGES credentials are not yet collected.

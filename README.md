@@ -17,7 +17,7 @@ A white-label HR workspace for Romanian companies. Next.js App Router, strict Ty
 - Benefit providers/catalogue, employee enrolment, five calculation models and monthly HR review/approval with saved amounts.
 - Private PDF uploads/generation, employee visibility, archival, onboarding/offboarding checklists and owner-controlled company access revocation.
 - Optional authenticator-app MFA for every role, with database and Storage enforcement once enrolled.
-- Automatic standard-case 2026 payroll calculation and printable individual payslips; explicit HR-controlled email delivery through MXroute when configured.
+- Automatic supported-case 2026 payroll calculation, including part-time contribution floors, declared meal vouchers and paid salary advances, with printable individual payslips; explicit HR-controlled email delivery through MXroute.
 - REGES identifier preparation, data-protection guidance and a public Romanian product-discovery page.
 - Automatic audit events for organisation, membership, employee, contract, salary, leave, attendance, benefits, documents and lifecycle changes.
 
@@ -122,7 +122,7 @@ Generate an employee summary, an HR-authored letter or a payroll payslip. Local 
 
 Checklists record completed/skipped tasks and preserve closed history. Only an owner can execute the offboarding access step. It removes this organisation's membership/account links and manager assignments, protects self/final-owner access and detects access regranted before closure. It does not delete the login account, erase retained records or change contracts/benefits/REGES automatically. Previously downloaded or emailed documents cannot be recalled.
 
-`/payroll` automatically computes standard full-time/full-month Romanian 2026 salary deductions and net pay, then saves an HR-only PDF. Review [the exact supported cases and sources](docs/payroll-rules.md) before use. Part-time, partial months, leave adjustments, benefits/vouchers, special exemptions and other deductions need separate handling. HR confirms deduction eligibility. This is not a full payroll engine, D112 filing or bank-payment facility. Have an accountant validate representative outputs before payments.
+`/payroll` automatically computes supported full-month Romanian 2026 salary deductions and net cash pay, then saves an HR-only PDF. Part-time employer contribution top-ups and evidenced floor exceptions, declared meal vouchers and already-paid advances are included. HR reviews benefit issuance and deduction eligibility; the server matches the contract salary/hours. Review [the exact supported cases and sources](docs/payroll-rules.md) before use. Fractional-leu amounts, partial months, leave adjustments, other benefits, income-tax exemptions and other deductions need separate handling. This is not a full payroll engine, D112 filing or bank-payment facility. Have an accountant validate representative outputs before payments.
 
 ## Optional MFA and document email
 
@@ -136,13 +136,13 @@ To verify connection/TLS/authentication without sending mail:
 node --env-file=.env.local --experimental-strip-types scripts/verify-smtp.mjs
 ```
 
-After HR reviews a document and makes it employee-visible, its action menu allows explicit delivery to that employee's current email. The recipient must be confirmed; a PDF attachment is a permanent external copy. Accepted/pending/uncertain attempts block resending. Definite failures can be retried; uncertain results require checking provider logs first. SMTP acceptance is not proof of inbox delivery. Local SMTP authentication remains pending as recorded in the checkpoint; no real message has been sent.
+After HR reviews a document and makes it employee-visible, its action menu allows explicit delivery to that employee's current email. The recipient must be confirmed; a PDF attachment is a permanent external copy. Accepted/pending/uncertain attempts block resending. Definite failures can be retried; uncertain results require checking provider logs first. SMTP acceptance is not proof of inbox delivery. Local MXroute connection, TLS and authentication passed a verify-only check on 23 September 2026; no real message has been sent, and Vercel SMTP settings/delivery remain unverified.
 
 ## REGES, data protection and discovery
 
 Apply migration 009 for `/integrations/reges`. Owners can save official employer/author identifiers and HR can read them. This is preparation only: no access tokens, test/production connection or submission is implemented. [The integration plan](docs/reges-integration.md) covers the remaining credential, schema, queue and result work.
 
-`/settings/data-protection` and [the operational assessment](docs/data-protection.md) explain implemented controls and remaining privacy notices, agreements, retention/rights, incident and recovery procedures. Technical controls alone do not establish GDPR compliance.
+`/settings/data-protection` and [the operational assessment](docs/data-protection.md) explain implemented controls and responsibilities. The [Cozumel SRL provider handbook](docs/privacy/provider-handbook.md), draft customer DPA, vendor register and operational register templates cover rights, incidents, support access and service exit. Contracts, notices, retention decisions and recovery evidence still need completion and adoption. Technical controls or draft procedures alone do not establish GDPR compliance.
 
 `/hr-management-romania` is a public Romanian product page, intentionally absent from navigation/footer links. It links to the product origin and appears in `sitemap.xml`; private workspace routes retain authentication and noindex. Discovery/indexing/ranking, including Google AI, is not guaranteed. Submit the sitemap in Search Console after deployment. [The billing proposal](docs/billing-proposal.md) recommends one company subscription at €2 per billable employee per month; Stripe is not connected.
 

@@ -122,3 +122,106 @@ test("mail configuration accepts only TLS SMTP ports and valid sender addresses"
       false,
     );
 });
+test("part-time contribution floors are employer costs, not employee deductions", () => {
+  const p = calculatePayroll({ ...base, hours: 4, basic: 2200 });
+  assert.equal(p.relief, 0);
+  assert.equal(p.contributionFloor, 4125);
+  assert.equal(p.cas, 550);
+  assert.equal(p.cass, 220);
+  assert.equal(p.incomeTax, 56);
+  assert.equal(p.net, 1374);
+  assert.equal(p.employerCas, 481);
+  assert.equal(p.employerCass, 193);
+  assert.equal(p.employerCost, 2924);
+  const exempt = calculatePayroll({
+    ...base,
+    hours: 4,
+    basic: 2200,
+    floorException: "student",
+    evidence: "Certificate-2026-09",
+  });
+  assert.equal(exempt.net, p.net);
+  assert.equal(exempt.employerCas, 0);
+  assert.equal(exempt.employerCass, 0);
+  assert.equal(exempt.employerCost, 2250);
+  const jan = calculatePayroll({
+    ...base,
+    month: "2026-01",
+    hours: 4,
+    basic: 2025,
+  });
+  assert.equal(jan.contributionFloor, 3750);
+  assert.equal(jan.employerCas, 432);
+  assert.equal(jan.employerCass, 172);
+  assert.throws(() => calculatePayroll({ ...base, hours: 4, basic: 2162 }));
+  assert.doesNotThrow(() =>
+    calculatePayroll({ ...base, hours: 4, basic: 2163 }),
+  );
+});
+test("meal vouchers are non-cash CASS/tax income, excluded from CAS/CAM and relief caps", () => {
+  const p = calculatePayroll({
+    ...base,
+    meals: 800,
+    mealsReference: "Issued-09",
+  });
+  assert.equal(p.gross, 10800);
+  assert.equal(p.cashGross, 10000);
+  assert.equal(p.contributionBase, 10000);
+  assert.equal(p.healthBase, 10800);
+  assert.equal(p.cas, 2500);
+  assert.equal(p.cass, 1080);
+  assert.equal(p.incomeTax, 722);
+  assert.equal(p.net, 5698);
+  assert.equal(p.cam, 225);
+  assert.equal(p.employerCost, 11025);
+  const minimum = calculatePayroll({
+    ...base,
+    basic: 4325,
+    meals: 800,
+    mealsReference: "Issued-09",
+  });
+  assert.equal(minimum.relief, 200);
+  assert.equal(minimum.personalDeduction, 519);
+  assert.equal(minimum.net, 2513);
+  const part = calculatePayroll({
+    ...base,
+    basic: 2200,
+    hours: 4,
+    meals: 800,
+    mealsReference: "Issued-09",
+  });
+  assert.equal(part.employerCas, 481);
+  assert.equal(part.employerCass, 113);
+  assert.equal(part.net, 1222);
+});
+test("an already-paid advance changes remaining cash only and cannot exceed net salary", () => {
+  const plain = calculatePayroll(base),
+    p = calculatePayroll({
+      ...base,
+      advance: 500,
+      advanceReference: "Bank-09",
+    });
+  assert.equal(p.net, 5850);
+  assert.equal(p.payable, 5350);
+  assert.equal(p.incomeTax, plain.incomeTax);
+  assert.equal(p.employerCost, plain.employerCost);
+  assert.equal(
+    calculatePayroll({ ...base, advance: 5850, advanceReference: "Bank-09" })
+      .payable,
+    0,
+  );
+  assert.throws(() =>
+    calculatePayroll({ ...base, advance: 5851, advanceReference: "Bank-09" }),
+  );
+  for (const patch of [
+    { hours: 0 },
+    { hours: 9 },
+    { floorException: "student" },
+    { hours: 4, floorException: "student", evidence: "" },
+    { meals: 800 },
+    { primary: "no", meals: 800, mealsReference: "Issued-09" },
+    { advance: 100 },
+    { hours: 1, basic: 600, meals: 100000, mealsReference: "Issued-09" },
+  ])
+    assert.throws(() => calculatePayroll({ ...base, ...patch }));
+});

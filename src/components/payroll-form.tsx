@@ -1,16 +1,26 @@
 "use client";
 import { useActionState, useRef, useState } from "react";
-import { calculatePayroll, type PayrollResult } from "@/lib/payroll";
-import { payrollDictionary, payrollRows } from "@/lib/payroll-i18n";
+import {
+  calculatePayroll,
+  floorExceptions,
+  type PayrollResult,
+} from "@/lib/payroll";
+import {
+  payrollDictionary,
+  payrollRows,
+  floorExceptionLabels,
+} from "@/lib/payroll-i18n";
 import { generatePayslip } from "@/app/(workspace)/payroll/actions";
 import { moneyLabel, type Locale } from "@/lib/i18n";
 export function PayrollForm({
   employeeId,
   basic,
+  hours,
   locale,
 }: {
   employeeId: string;
   basic?: number;
+  hours?: number;
   locale: Locale;
 }) {
   const [state, submit, pending] = useActionState(generatePayslip, {}),
@@ -63,7 +73,19 @@ export function PayrollForm({
               defaultValue={state.values?.month ?? "2026-09"}
             />
           </label>
-          {(["basic", "bonus"] as const).map((k) => (
+          <label className="field">
+            <span>{d.hours}</span>
+            <input
+              name="hours"
+              type="number"
+              min="0.01"
+              max="8"
+              step="0.01"
+              required
+              defaultValue={state.values?.hours ?? hours ?? 8}
+            />
+          </label>
+          {(["basic", "bonus", "meals", "advance"] as const).map((k) => (
             <label className="field" key={k}>
               <span>{d[k]}</span>
               <input
@@ -77,6 +99,31 @@ export function PayrollForm({
               />
             </label>
           ))}
+          <label className="field">
+            <span>{d.floorException}</span>
+            <select
+              name="floorException"
+              defaultValue={state.values?.floorException ?? "none"}
+            >
+              {floorExceptions.map((key) => (
+                <option value={key} key={key}>
+                  {floorExceptionLabels(locale)[key]}
+                </option>
+              ))}
+            </select>
+          </label>
+          {(["evidence", "mealsReference", "advanceReference"] as const).map(
+            (key) => (
+              <label className="field" key={key}>
+                <span>{d[key]}</span>
+                <input
+                  name={key}
+                  maxLength={120}
+                  defaultValue={state.values?.[key] ?? ""}
+                />
+              </label>
+            ),
+          )}
           {(["primary", "young", "reduced"] as const).map((k) => (
             <label className="field" key={k}>
               <span>{d[k]}</span>
@@ -103,6 +150,12 @@ export function PayrollForm({
           ))}
         </div>
         <p className="time-help">{d.scope}</p>
+        <p className="time-help">{d.floorHelp}</p>
+        <p className="time-help">{d.referencesHelp}</p>
+        <label className="benefit-confirm">
+          <input type="checkbox" name="benefits_reviewed" required />
+          {d.benefitsReview}
+        </label>
         <label className="benefit-confirm">
           <input type="checkbox" name="standard" required />
           {d.standard}

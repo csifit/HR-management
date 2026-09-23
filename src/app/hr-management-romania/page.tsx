@@ -140,9 +140,12 @@ export default function HrRomaniaPage() {
         <p>
           Calculatorul salarial calculează automat CAS, CASS, impozitul și netul
           pentru cazurile standard acceptate din 2026 și generează fluturași
-          PDF. Cazurile cu timp parțial, concedii, beneficii sau scutiri
-          speciale necesită tratare separată. Rezultatele trebuie verificate
-          înaintea plății; platforma nu execută plăți bancare și nu depune D112.
+          PDF. Sunt incluse luni complete cu timp parțial, diferențele de
+          contribuții suportate de angajator, tichetele de masă declarate și
+          avansurile deja plătite, pentru sume în lei întregi. Lunile parțiale,
+          concediile, alte beneficii și scutirile de impozit necesită tratare
+          separată. Rezultatele trebuie verificate înaintea plății; platforma nu
+          execută plăți bancare și nu depune D112.
         </p>
         <h3>Trimite deja contractele în REGES?</h3>
         <p>

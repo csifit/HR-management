@@ -25,7 +25,7 @@ export default async function PayrollPage({
   const contract = employee
     ? await supabase
         .from("employment_contracts")
-        .select("gross_salary")
+        .select("gross_salary,working_hours")
         .eq("organisation_id", organisation.id)
         .eq("employee_id", employee.id)
         .eq("status", "active")
@@ -67,8 +67,10 @@ export default async function PayrollPage({
           {organisation.status === "active" ? (
             <section className="card time-form-card">
               <PayrollForm
+                key={employee.id}
                 employeeId={employee.id}
                 basic={contract.data?.gross_salary}
+                hours={contract.data?.working_hours}
                 locale={locale}
               />
             </section>

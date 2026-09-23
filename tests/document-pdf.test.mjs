@@ -7,7 +7,7 @@ import {
   isReadablePdf,
   UnsupportedPdfText,
 } from "../src/lib/document-pdf.ts";
-import { calculatePayroll } from "../src/lib/payroll.ts";
+import { calculatePayroll, payrollSchema } from "../src/lib/payroll.ts";
 import { payslipBody } from "../src/lib/payroll-i18n.ts";
 const input = {
   locale: "ro",
@@ -38,7 +38,7 @@ async function sample(name, bytes) {
   }
 }
 test("Romanian payslip prints its calculation facts and tax breakdown on one A4 page", async () => {
-  const facts = {
+  const facts = payrollSchema.parse({
     month: "2026-09",
     basic: 4325,
     bonus: 0,
@@ -48,7 +48,7 @@ test("Romanian payslip prints its calculation facts and tax breakdown on one A4 
     children: 1,
     reduced: "no",
     standard: "on",
-  };
+  });
   const bytes = await generateEmployeePdf({
     ...input,
     template: "payslip",
@@ -69,6 +69,37 @@ test("Romanian summary is a valid one-page A4 PDF with embedded font", async () 
   assert.ok(Math.abs(pdf.getPage(0).getWidth() - 595.28) < 0.1);
   assert.ok(bytes.length < 10485760);
   await sample("employee-summary", bytes);
+});
+test("expanded payslip includes voucher, employer top-up and advance facts with bounded pagination", async () => {
+  const facts = payrollSchema.parse({
+    month: "2026-09",
+    basic: 2200,
+    bonus: 0,
+    hours: 4,
+    primary: "yes",
+    dependants: 0,
+    young: "no",
+    children: 0,
+    reduced: "no",
+    standard: "on",
+    meals: 800,
+    mealsReference: "Tichete-09-2026",
+    advance: 500,
+    advanceReference: "OP-09-2026",
+  });
+  const body = payslipBody(facts, calculatePayroll(facts), "ro");
+  assert.match(body, /Diferență CAS suportată de angajator/);
+  assert.match(body, /Rest de plată/);
+  assert.match(body, /OP-09-2026/);
+  const bytes = await generateEmployeePdf({
+    ...input,
+    template: "payslip",
+    title: "Fluturaș de salariu - 2026-09",
+    body,
+  });
+  const pdf = await PDFDocument.load(bytes);
+  assert.ok(pdf.getPageCount() <= 2);
+  await sample("payslip-part-time", bytes);
 });
 test("long Romanian letter wraps long words and paginates", async () => {
   const paragraph =

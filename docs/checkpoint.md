@@ -1,6 +1,55 @@
 # Safe checkpoint — 23 September 2026
 
-## Current state — local release checks complete; live verification pending
+## Current state — payroll expansion and provider privacy procedures complete locally
+
+**This section supersedes all historical state and resume instructions below.** The user resumed for broader payroll and organisational/provider GDPR procedures, requested an SMTP check and an explanation of variable Stripe totals, then confirmed SAGA for official invoices.
+
+### Working boundaries and deployment status
+
+- **Never run `npm run dev`, start another server, or stop the user's server.** The user manages the server in VS Code and prefers manual screen checks. No server was started/stopped this turn.
+- Started with a clean working tree at **`429fc69` (`payroll and reges prep`)**. This turn's changes are local and uncommitted. No commit, push, deployment, production HR mutation, Stripe operation or actual email send occurred.
+- The user reports applying **008–010 and deploying to Vercel**. This report supersedes the earlier “local migrations only” status, but remote schema/history and deployment were not independently verified this turn. No new migration is needed for the current changes.
+- Supabase project remains `mlgnmdhfhybhzzcoxmtr`. Earlier CLI calls returned 403; that is not proof of logout. Do not repeatedly request login, blindly reapply migrations, repair history or push the root localhost auth config.
+- **MXroute local connection, TLS and authentication now pass**: `node --env-file=.env.local --experimental-strip-types scripts/verify-smtp.mjs` ran after the user's new request. It only called transport.verify(); no email was sent and no secret/provider response was printed. Vercel SMTP settings, DNS authentication and actual delivery remain unverified.
+- The previous exposure of a password from `.env.example` was already remedied in the template and reported to the user. Rotation has not been independently confirmed. Never print `.env.local` or copy credentials into Git/chat.
+
+### User decisions preserved
+
+- First payroll expansion: **part-time salaries, meal vouchers and salary advances**. Automatic calculation stays in the app.
+- Legal provider: **Cozumel SRL**, **Str. Dr. Louis Pasteur nr 38/ ap. 31, 410154, Oradea, jud. Bihor**, privacy contact **admin@mkdir.space**. `src/lib/service-provider.ts` separates legal identity from white-label brand settings.
+- **SAGA issues official customer invoices; Stripe collects payments.** Billing remains a design proposal, with no live integration/charges. Price intention stays €2 per employee/month; earlier 30-day trial and September additions first billed in October remain planning inputs. Count/trial/VAT/currency/grace details still need decisions.
+- Optional MFA for every role, private HR-first payslips and explicit employee email delivery remain unchanged product choices.
+
+### Implemented this turn
+
+1. **Payroll v2**, `RO-2026-monthly-v2`: full-month 2026 part-time minimum checks, employer-paid CAS/CASS floor shortfalls and evidenced exceptions, meal-voucher CASS/income-tax treatment without adding vouchers to cash pay, and already-paid advances subtracted only from remaining payment. The 2026 floor is 3,750/4,125; full-time minimum relief remains 300/200 with the eligibility/cash-gross caps. Personal deduction bands include vouchers.
+2. RO/EN payroll fields, evidence/issuance/payment references, preview and PDF breakdown. Server generation checks a single active full-month RON contract with matching hours/basic salary, active employee and no recorded approved leave/absence. HR explicitly reviews benefits; **the old blanket active-benefit block was replaced by a declaration of actual issued vouchers and no omitted unsupported benefits**. Benefits are not auto-classified or auto-imported as issued vouchers. Changing employee resets the form.
+3. Scope remains **whole-RON inputs and full months**. A genuine RON 2,162.50 part-time contract is not supported; do not round the contract to fit. Fractional earnings, partial months/leave pay, other benefits, income-tax exemptions, foreign/special cases, garnishments, structured payroll/correction ledger, D112 and bank payments remain future work. Floor exceptions do not grant tax exemptions. Accountant reference validation is still required before production reliance.
+4. **Provider/organisational GDPR pack** in `docs/privacy/`: provider handbook, customer DPA draft, vendor/transfer register and empty operational register templates. Covers controller/processor roles, rights requests, incidents, verified support access, onboarding, retention/return/deletion and recovery. Completed personal-data registers belong in a restricted operational system, not Git. These are draft procedures, **not an implemented case-management/export/erasure engine or compliance certification**.
+5. `/settings/data-protection` identifies Cozumel and gives HR rights-request and incident procedures. Legal/company registration, approved contracts/notices, named leads, vendor entities/DPAs/regions/transfers, retention choices, export/deletion processes and database/file backup/restoration evidence still need completion/adoption.
+6. `docs/billing-proposal.md` explains one €2 Stripe price with per-company subscription quantity, immutable employee-count snapshots, no-proration next-period changes, durable renewal handling, payment confirmation, failure/SCA and SAGA reconciliation. Stripe Billing still creates invoice objects; presentation/portal/email settings must match the SAGA workflow. Stripe Payments against SAGA-approved amounts is documented as the more custom alternative if eliminating Billing invoices is required. No claim that hiding a PDF resolves legal invoicing status.
+7. README, architecture, roadmap, supported payroll rules and public discovery copy updated to reflect the actual scope. Payroll source references are in `docs/payroll-rules.md`; EDPB and Stripe primary links are in their respective documents.
+
+### Verification this turn
+
+- **13/13 focused tests passed** across `tests/payroll.test.mjs` and `tests/document-pdf.test.mjs`, covering standard regressions, part-time employer floors/exemption, voucher tax/cash separation, advances and validation, plus PDF generation.
+- **TypeScript, ESLint and production build passed.** `git diff --check` passed (normal LF/CRLF warnings only). Existing unrelated DB tests were not repeated; no migrations changed.
+- Both the normal payslip and expanded part-time/voucher/advance payslip rendered as one page. Poppler renders were visually inspected for Romanian glyphs, layout, breakdown and footers. Synthetic `tmp/pdfs` intermediates were removed after checking the resolved workspace path.
+- The PDF skill authoring marker already ran successfully once earlier in this conversation; **do not repeat it**.
+- SMTP verify-only passed as described above. **Not tested this turn:** live new screens/Storage/Auth/MFA, actual email delivery, remote migration state or Stripe/SAGA integration. The user prefers manual screen checks.
+
+### Next steps
+
+1. Preserve the working tree and untracked `docs/privacy/` / `src/lib/service-provider.ts`. User can review screens and deploy these changes; no new database migration is required. No commit/push/deploy has been requested here.
+2. Validate the new payroll examples against the accountant's reference calculations. Prioritise fractional earnings and partial-month/leave cases in the next separately tested rule expansion. Do not imply complete payroll coverage.
+3. Complete and adopt the privacy pack: Cozumel registration details, named leads, customer DPA/notices, actual vendor/transfer evidence, retention decisions and tested access-export/erasure/restore procedures. Customer-facing contracts must not claim unverified controls.
+4. For billing implementation, finalise employee counting, trial/renewal timing, VAT inclusion and EUR/RON conversion with the SAGA workflow, and payment grace policy. No employee-level payments or payroll details need to be sent to Stripe.
+5. Verify production SMTP variables separately and perform an actual delivery only on explicit instruction with an agreed recipient. Successful TLS/authentication is not proof of inbox delivery. Follow the existing uncertain-attempt reconciliation rule.
+6. Resolve live Supabase access/history checks when needed without blind reapplication or auth-config pushes. Actual REGES submission, broader payroll, signing and automated privacy operations remain future work.
+
+---
+
+## Historical state — earlier 23 September release checks (superseded)
 
 **The user requested a safe checkpoint on 23 September 2026, then explicitly asked to continue. The remaining local release checks and documentation are now complete. This section supersedes all historical resume instructions below.**
 

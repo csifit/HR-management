@@ -94,7 +94,7 @@ PDFs use a bundled Noto Sans font with Romanian glyph checks, A4 pagination and 
 
 Lifecycle tasks preserve completion actors, notes, versions and closure history. The owner-only offboarding step removes only this company's membership and employee/manager account links, protecting self/final-owner access. Closure rejects regranted access. Auth accounts, other memberships and historical HR records remain. Checklist confirmations do not automatically change contracts, benefits or government records.
 
-The payroll module is a pure, effective-dated standard-case calculator. The server validates the current employee/contract and excludes recorded leave, absences and active benefits before generating a PDF. The PDF snapshots entered facts and computed results, but there is no structured payroll ledger or historical contract reconstruction yet. See [supported rules](payroll-rules.md); unsupported cases require separate handling. CAM is an indicative allocation, not employer-level tax filing.
+The payroll module is a pure, effective-dated supported-case calculator. Version `RO-2026-monthly-v2` includes full-month part-time contribution floors/evidenced exceptions, declared meal vouchers and paid advances. The server matches the current employee/contract, hours and salary, excludes recorded leave/absences and requires HR's explicit benefits review. Benefit allocations are not automatically treated as issued vouchers. The PDF snapshots entered facts, evidence references and computed results, but there is no structured payroll ledger or historical contract reconstruction yet. See [supported rules](payroll-rules.md), including the whole-RON limitation; unsupported cases require separate handling. CAM and employer top-ups are indicative employee allocations, not employer-level filing.
 
 ## MFA and email boundaries
 
@@ -116,4 +116,4 @@ Each future module needs tenant keys, policies, actions and UI. Integration secr
 - The employee's directory status and contract status are separately maintained; no automated legal or employment-status transitions are inferred.
 - Contract amendments have a safe parent relationship, but a formal amendment workflow and immutable contract version history are deferred.
 - Tax IDs and COR codes receive structural validation only; no government registry verification or legal compliance certification is claimed.
-- Automatic payroll covers only the documented standard 2026 cases. No automatic leave entitlement, benefit eligibility/tax treatment, D112 or bank execution is implemented. Benefit allocations use configured amounts and HR review.
+- Automatic payroll covers only the documented 2026 cases, including declared meal-voucher tax treatment. No automatic leave entitlement/pay, voucher eligibility/issuance, general benefit tax engine, D112 or bank execution is implemented. Benefit allocations use configured amounts and HR review.
