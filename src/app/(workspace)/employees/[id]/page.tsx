@@ -13,6 +13,8 @@ import { getLocale } from "@/lib/locale";
 import { dictionary, dateLabel, moneyLabel, actionLabel } from "@/lib/i18n";
 import { canManage } from "@/lib/types";
 import { Avatar, StatusBadge, Detail, EmptyState } from "@/components/ui";
+import { EmployeeOnboarding } from "@/components/employee-onboarding";
+import { ContractReview } from "@/components/contract-review";
 export default async function EmployeePage({
   params,
   searchParams,
@@ -66,6 +68,20 @@ export default async function EmployeePage({
   if (activity.error) throw new Error("Activity could not be loaded.");
   const currentContract =
     contracts.data.find((c) => c.status === "active") ?? contracts.data[0];
+  const reviews =
+    manage && tab === "contract"
+      ? await supabase
+          .from("contract_reviews")
+          .select("*")
+          .eq("organisation_id", organisation.id)
+          .in(
+            "contract_id",
+            contracts.data.length
+              ? contracts.data.map((c) => c.id)
+              : [employee.id],
+          )
+      : { data: [], error: null };
+  if (reviews.error) throw new Error("Contract reviews could not be loaded.");
   return (
     <>
       <Link className="back-link" href="/employees">
@@ -139,6 +155,13 @@ export default async function EmployeePage({
           </Link>
         </nav>
       </section>
+      {tab === "personal" && manage && (
+        <EmployeeOnboarding
+          employeeId={employee.id}
+          linked={Boolean(employee.user_id)}
+          locale={locale}
+        />
+      )}
       {tab === "personal" && (
         <div className="profile-grid">
           <section className="card">
@@ -264,6 +287,19 @@ export default async function EmployeePage({
                       {moneyLabel(contract.gross_salary, locale)}
                     </Detail>
                   </dl>
+                  {manage && (
+                    <ContractReview
+                      id={contract.id}
+                      version={contract.review_version}
+                      reviewed={reviews.data.some(
+                        (r) =>
+                          r.contract_id === contract.id &&
+                          r.contract_version === contract.review_version,
+                      )}
+                      locale={locale}
+                      writable={writable}
+                    />
+                  )}
                 </div>
               </section>
             ))

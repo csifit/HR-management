@@ -102,9 +102,11 @@ function Submit({
 export function AuthForm({
   mode,
   locale,
+  join = false,
 }: {
   mode: "login" | "register" | "forgot" | "update";
   locale: Locale;
+  join?: boolean;
 }) {
   const d = dictionary(locale);
   const action =
@@ -126,6 +128,7 @@ export function AuthForm({
           : d.updatePassword;
   return (
     <form action={formAction} className="form-stack">
+      {join && <input type="hidden" name="next" value="/join" />}
       <Feedback state={state} />
       {mode === "register" && (
         <Field label={d.fullName} name="full_name" state={state} required>
@@ -269,6 +272,13 @@ export function EmployeeForm({
   return (
     <form action={action} className="employee-form">
       <Feedback state={state} />
+      {!employee && (
+        <p className="notice">
+          {locale === "ro"
+            ? "La salvare, HRConnector trimite o invitație la adresa de email introdusă, cu acces de angajat, și pornește lista de angajare. Verifică adresa înainte de salvare."
+            : "Saving sends an employee-access invitation to the entered email and starts the onboarding checklist. Check the address before saving."}
+        </p>
+      )}
       <div className="form-section">
         <div className="form-section-heading">
           <span>01</span>

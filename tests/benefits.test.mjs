@@ -190,13 +190,13 @@ afterEach(async () => {
 });
 after(async () => db.close());
 
-test("all five benefit models prepare from recorded days and require exception review before approval", async () => {
+test("all five benefit models include automatic elapsed days and require exception review before approval", async () => {
   const run = await prepare();
   const rows = await items(run);
   assert.equal(rows.length, 5);
   assert.equal(
     Number(rows.find((i) => i.model === "per_worked_day").suggested_amount),
-    90,
+    1035,
   );
   assert.equal(
     Number(rows.find((i) => i.model === "fixed_monthly").suggested_amount),
@@ -214,7 +214,8 @@ test("all five benefit models prepare from recorded days and require exception r
     scalar("select public.benefit_month_summary($1,$2)", [org, run]),
   );
   assert.equal(summary.employees, 1);
-  assert.equal(summary.worked_days, 2);
+  assert.equal(summary.worked_days, 23);
+  assert.ok(rows.every((i) => i.flags.includes("automatic_attendance")));
   assert.equal(summary.unreviewed, 5);
   await assert.rejects(approve(run), { code: "B0003" });
   await reviewAll(run, { annual_allowance: 100, flexible_budget: 200 });
@@ -264,7 +265,7 @@ test("all five benefit models prepare from recorded days and require exception r
         scalar("select public.benefit_month_summary($1,$2)", [org, run]),
       )
     ).worked_days,
-    2,
+    23,
   );
   assert.equal(
     Number(

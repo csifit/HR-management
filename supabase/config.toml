@@ -18,7 +18,7 @@ port = 54323
 [auth]
 enabled = true
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000/auth/confirm", "http://localhost:3000/auth/confirm?next=/update-password", "http://localhost:3000/update-password"]
+additional_redirect_urls = ["http://localhost:3000/auth/confirm", "http://localhost:3000/auth/confirm?next=/join", "http://localhost:3000/auth/confirm?next=/update-password", "http://localhost:3000/update-password"]
 enable_signup = true
 minimum_password_length = 10
 

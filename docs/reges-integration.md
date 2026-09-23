@@ -13,3 +13,5 @@ Before enabling a production adapter:
 5. Reconcile external employee/contract IDs and asynchronous results, including related results. Expose failures with redacted messages and preserve audit history.
 
 The adapter currently rejects submission. No mock success, live government transmission or token exchange is implemented.
+
+Migration 012 adds HR contract review in the employee's Contract tab. The database records the reviewer, time and `review_version`; every contract edit increments that version and makes the old review stale. Only owners/HR can approve, including through direct RPC calls. Review is not transmission or REGES acceptance. When building the outbox, require a current review inside the same transaction that freezes the outgoing payload; changes to any mapped employee/employer data must also invalidate payload approval. Do not rely on a hidden button or this contract-only review to approve a future payload containing additional data.

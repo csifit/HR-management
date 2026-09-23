@@ -24,7 +24,7 @@ begin
   perform public.save_attendance(v_org,v_employee,'2026-07-02',8,8,'none',null);
   v_run:=public.prepare_benefit_month(v_org,'2026-07-01',null);
   select * into strict v_item from public.benefit_run_items where run_id=v_run;
-  if v_item.suggested_amount is distinct from 45 or v_item.worked_days is distinct from 1 then raise exception 'FAIL: recorded-day calculation'; end if;
+  if v_item.suggested_amount is distinct from 1035 or v_item.worked_days is distinct from 23 then raise exception 'FAIL: automatic plus manual worked-day calculation'; end if;
   begin
     perform public.approve_benefit_month(v_org,v_run,1);
     raise exception 'FAIL: unreviewed approval';
@@ -38,26 +38,26 @@ begin
   exception when insufficient_privilege then null; end;
   perform set_config('request.jwt.claim.sub',v_owner::text,true);
   perform public.review_benefit_item(v_org,v_item.id,1,true,45,'QA review completed');
-  perform public.save_attendance(v_org,v_employee,'2026-07-03',8,8,'none',null);
+  perform public.save_attendance(v_org,v_employee,'2026-07-03',8,0,'none',null);
   begin
     perform public.approve_benefit_month(v_org,v_run,2);
     raise exception 'FAIL: source change ignored';
   exception when sqlstate 'B0002' then null; end;
   perform public.prepare_benefit_month(v_org,'2026-07-01',2);
   select * into strict v_item from public.benefit_run_items where run_id=v_run;
-  if v_item.suggested_amount is distinct from 90 then raise exception 'FAIL: reprepare'; end if;
-  perform public.review_benefit_item(v_org,v_item.id,1,true,90,'QA second review');
+  if v_item.suggested_amount is distinct from 990 then raise exception 'FAIL: reprepare'; end if;
+  perform public.review_benefit_item(v_org,v_item.id,1,true,990,'QA second review');
   select version into v_version from public.benefit_runs where id=v_run;
   perform public.approve_benefit_month(v_org,v_run,v_version);
   v_summary:=public.benefit_month_summary(v_org,v_run);
-  if (v_summary->>'total')::numeric is distinct from 90 or (v_summary->>'worked_days')::integer is distinct from 2 then raise exception 'FAIL: monthly totals'; end if;
+  if (v_summary->>'total')::numeric is distinct from 990 or (v_summary->>'worked_days')::integer is distinct from 22 then raise exception 'FAIL: monthly totals'; end if;
   begin
     perform public.review_benefit_item(v_org,v_item.id,2,false,0,'Forbidden correction');
     raise exception 'FAIL: approved record mutation';
   exception when sqlstate 'B0001' then null; end;
   perform set_config('request.jwt.claim.sub',v_user::text,true);
   select final_amount into v_total from public.benefit_run_items where run_id=v_run;
-  if v_total is distinct from 90 then raise exception 'FAIL: own approved visibility'; end if;
+  if v_total is distinct from 990 then raise exception 'FAIL: own approved visibility'; end if;
   perform set_config('request.jwt.claim.sub',v_outsider::text,true);
   v_other_org:=public.create_organisation('Other benefits QA','94'||lpad(floor(random()*100000000)::text,8,'0'));
   select count(*) into v_count from public.benefit_run_items where run_id=v_run;

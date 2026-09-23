@@ -7,12 +7,13 @@ import { isConfigured } from "@/lib/supabase/config";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; next?: string }>;
 }) {
   if (!isConfigured()) redirect("/setup");
   const locale = await getLocale();
   const d = dictionary(locale);
-  const { error } = await searchParams;
+  const { error, next } = await searchParams;
+  const join = next === "/join";
   return (
     <>
       <span className="eyebrow">{d.secureWorkspace}</span>
@@ -23,9 +24,12 @@ export default async function LoginPage({
           {d.authError}
         </p>
       )}
-      <AuthForm mode="login" locale={locale} />
+      <AuthForm mode="login" locale={locale} join={join} />
       <p className="auth-switch">
-        {d.noAccount} <Link href="/register">{d.register}</Link>
+        {d.noAccount}{" "}
+        <Link href={join ? "/register?next=/join" : "/register"}>
+          {d.register}
+        </Link>
       </p>
     </>
   );

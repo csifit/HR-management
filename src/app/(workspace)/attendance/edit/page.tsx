@@ -53,7 +53,7 @@ export default async function AttendanceEdit({
           <p>{d.fromLeave}</p>
         ) : (
           <AttendanceForm
-            key={day.version ?? "new"}
+            key={`${employee.id}-${day.day}-${day.version ?? "new"}`}
             employeeId={employee.id}
             day={day}
             locale={locale}

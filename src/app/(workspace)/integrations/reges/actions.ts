@@ -7,6 +7,26 @@ import {
 import type { ActionState } from "@/lib/types";
 import { revalidatePath } from "next/cache";
 const uuid = z.union([z.uuid(), z.literal("")]).transform((v) => v || null);
+export async function reviewContract(
+  _s: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const p = await parseDocumentAction(
+    z.object({
+      id: z.uuid(),
+      version: z.coerce.number().int().positive(),
+      confirm: z.literal("on"),
+    }),
+    form,
+  );
+  if (p.error) return p.error;
+  const { error } = await p.context.supabase.rpc("review_contract_for_reges", {
+    p_org: p.context.organisation.id,
+    p_contract: p.data.id,
+    p_version: p.data.version,
+  });
+  return finishDocumentAction(error, p.values);
+}
 const schema = z
   .object({
     employer_id: uuid,

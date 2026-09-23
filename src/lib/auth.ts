@@ -44,6 +44,9 @@ export const getOrganisationContext = cache(async () => {
   const { supabase, user } = await requireUser();
   const memberships = await getMemberships();
   if (!memberships.length) {
+    const invites = await supabase.rpc("my_employee_invitations");
+    if (invites.error) throw new Error("Invitations could not be loaded.");
+    if (invites.data.length) redirect("/join");
     const admin = await supabase.rpc("is_platform_admin");
     if (admin.error) throw new Error("Platform access could not be checked.");
     redirect(admin.data ? "/platform" : "/onboarding");

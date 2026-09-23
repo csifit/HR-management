@@ -66,7 +66,7 @@ export type AttendanceDay = {
   day: string;
   planned_hours: number;
   worked_hours: number | null;
-  category: LeaveCategory | "none" | "unrecorded";
+  category: LeaveCategory | "none" | "unrecorded" | "automatic";
   recorded: boolean;
   version: number | null;
   leave_request_id: string | null;

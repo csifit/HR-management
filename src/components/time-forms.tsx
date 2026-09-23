@@ -403,7 +403,9 @@ export function AttendanceForm({
               step="0.01"
               required
               defaultValue={
-                state.values?.worked_hours ?? day.worked_hours ?? ""
+                state.values?.worked_hours ??
+                day.worked_hours ??
+                day.planned_hours
               }
             />
           </Field>
@@ -413,7 +415,9 @@ export function AttendanceForm({
             name="absence"
             defaultValue={
               state.values?.absence ??
-              (day.category === "unrecorded" ? "none" : day.category)
+              (day.category === "unrecorded" || day.category === "automatic"
+                ? "none"
+                : day.category)
             }
           >
             {(["none", "medical", "unpaid", "other"] as const).map((c) => (

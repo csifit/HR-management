@@ -64,6 +64,7 @@ export type Employee = {
   updated_at: string;
 };
 export type Contract = {
+  review_version: number;
   id: string;
   organisation_id: string;
   employee_id: string;

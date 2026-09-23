@@ -10,19 +10,19 @@ Expanded Superadmin implemented: membership-independent access, compact organisa
 
 Implemented: directory, filters/search/pagination, create/edit employee, profiles, manager assignment, confirmed-account linking, contract create/edit/statuses, restricted salary information, activity history, and a same-employee parent-contract relationship for future addenda.
 
-Later expansion within this phase: employee invitation emails, formal contract amendment workflow and immutable contract revisions where needed. Company access revocation is implemented through Phase 5 offboarding.
+Employee creation now attempts an MXroute invitation with employee-only acceptance by a verified matching account; HR sees delivery/expiry and can renew or revoke. Contract review records the HR reviewer and revision and becomes stale after edits. Formal amendments and immutable full contract history remain future work. Company access revocation is implemented through Phase 5 offboarding.
 
 ## Phase 3 — Leave and attendance
 
 Implemented: full-day annual, medical, unpaid and configurable leave types; manually configured yearly allowances with approved/pending/available totals; employee requests, manager/HR decisions without self approval, cancellation, calendar/list views; daily planned/worked hours, monthly totals and absence categories. Approved leave appears automatically in attendance. Working calendar exceptions, audit, tenant boundaries and access-state enforcement are included.
 
-Setup requires HR to configure yearly allowances and public holidays/company exceptions. The base schedule is Monday–Friday, 8 planned hours per working day, editable per date. No clock-in/out, partial-day leave, recurring employee schedules, automatic legal accrual or automatic leave-pay calculation. Future enhancements can add these after their rules are agreed.
+Setup requires HR to configure yearly allowances and public holidays/company exceptions. Completed working days now count contract hours automatically, per the user's choice, with approved leave taking precedence and manual corrections preserved. Today/future days remain planned. Missing/ambiguous/inactive contracts do not produce assumed work; the legacy eight-hour planning fallback remains. No clock-in/out, shift calendars, partial-day leave, automatic legal accrual or automatic leave-pay calculation.
 
 ## Phase 4 — Benefits
 
 Implemented: tenant-owned provider catalogue and benefit definitions; employee enrolment dates; per-day/fixed/annual/flexible/non-financial models; attendance-aware monthly drafts, exceptions, HR adjustments and approval. Approved allocations and monthly worked-day totals are preserved. Annual/flexible limits, stale-source detection, audit, tenant access states and employee-only benefit visibility are enforced in PostgreSQL.
 
-The user approved manual HR review for mid-month changes, recorded-worked-day counting, fixed amounts without automatic proration and manual annual/flexible allocations. Setup requires actual providers, rates and enrolments; no sample amounts are seeded. Provider adapters explicitly report unavailable. Exports, provider submissions, tax calculations, automatic proration and corrections to approved months are deferred.
+The user's later choice of automatic elapsed-day attendance supersedes recorded-only day counting. Benefit drafts include automatic days and flag them for HR review. Fixed amounts remain unprorated; annual/flexible allocations and mid-month adjustments remain manual. Setup requires actual providers, rates and enrolments; no sample amounts are seeded. Provider adapters remain unavailable. Exports, submissions, general benefit tax treatment, automatic proration and approved-month corrections are deferred.
 
 ## Phase 5 — Documents and lifecycle
 
@@ -30,7 +30,7 @@ Implemented: tenant-protected PDF Storage, metadata/statuses, summary/letter/pay
 
 ## Phase 6 — REGES integration framework
 
-Implemented locally: owner-managed employer/author identifiers and a clearly disconnected integration screen, with tenant/MFA/version checks. The official guide/developer repository were reviewed. Remaining: data/schema mapping, encrypted credential lifecycle, official test access, submission queue/history and asynchronous result reconciliation. No live government request or mock success.
+Implemented locally: owner-managed employer/author identifiers and a clearly disconnected integration screen, with tenant/MFA/version checks. HR reviews current contract revisions before future transmission; edits require another review. The official guide/developer repository were reviewed. Remaining: data/schema mapping, encrypted credentials, official test access, a queue enforcing current approval for its full payload, submission history and asynchronous reconciliation. No live government request or mock success.
 
 ## Phase 7 — Payroll and accounting
 
@@ -45,3 +45,5 @@ Optional TOTP MFA for every role is implemented with database/Storage enforcemen
 A public Romanian product page is indexable through its sitemap and has no inbound navigation/footer links. Search placement is not guaranteed. Stripe collections are proposed at €2 per billable employee/month, one company payment and a 30-day trial. The user will issue official invoices in SAGA. The billing proposal explains variable subscription quantities, internal Stripe Billing invoice records and SAGA reconciliation; count/trial/VAT/currency/grace rules must be finalised before building or charging.
 
 Deployment target: Vercel. GitHub repository creation is managed by the project owner.
+
+The main public homepage now shows the €2/employee/month price discreetly, with tax details deferred to the offer. Employee profiles include a compact onboarding checklist backed by the existing versioned lifecycle tasks. New workflows require migrations 011–012 and the invitation confirmation redirect allowlist before deployment.

@@ -422,6 +422,22 @@ export function actionLabel(action: string, locale: Locale) {
     "employee.updated": ["Profil actualizat", "Profile updated"],
     "contract.created": ["Contract adăugat", "Contract added"],
     "contract.updated": ["Contract actualizat", "Contract updated"],
+    "contract.reviewed": [
+      "Contract verificat de HR",
+      "Contract reviewed by HR",
+    ],
+    "invitation.requested": [
+      "Invitație angajat solicitată",
+      "Employee invitation requested",
+    ],
+    "invitation.accepted": [
+      "Invitație angajat acceptată",
+      "Employee invitation accepted",
+    ],
+    "invitation.revoked": [
+      "Invitație angajat revocată",
+      "Employee invitation revoked",
+    ],
     "salary.changed": ["Salariu actualizat", "Salary updated"],
     "organisation.created": ["Organizație creată", "Organisation created"],
     "organisation.updated": ["Organizație actualizată", "Organisation updated"],

@@ -1,6 +1,45 @@
 # Safe checkpoint — 23 September 2026
 
-## Current state — payroll expansion and provider privacy procedures complete locally
+## Current state — employee invitations, compact onboarding, attendance automation and contract review
+
+**This section supersedes the older resume instructions below.** After the payroll/privacy work, the user asked to continue with employee invitations, a compact onboarding checklist, discreet public pricing, contract-based attendance and HR review before REGES. They explicitly chose **“Automatically count elapsed working days as worked”**, superseding the older recorded-only attendance/benefit rule.
+
+### Repository and boundaries
+
+- The user's newer commit **`d31829b` (`payroll  and GDPR`)** now contains the preceding payroll/provider privacy work. Preserve it and all current local/untracked changes. No commit, push, production migration, deployment or actual invitation/document email was performed by this implementation.
+- **Never run `npm run dev`, start another server, or stop the user's server.** They manage it in VS Code and prefer manual screen checks. This remains in force.
+- Migrations **011 and 012 are new local files and must be applied before deploying this frontend**. User-reported 008–010 application/deployment remains unverified remotely. Do not blindly reapply earlier migrations or repair their history. Earlier Supabase 403 is not proof of logout; do not keep asking for login.
+- Local MXroute TLS/authentication passed earlier in this turn; no real email has been sent. Vercel SMTP and inbox delivery remain unverified. Keep all SMTP credentials private; previous rotation confirmation remains unknown.
+
+### New implementation
+
+1. **Employee invitations — migration 011.** Adding an active/onboarding employee in the app queues and attempts an invitation through the existing MXroute transport, and starts an onboarding checklist. Failure retains the employee. The profile shows delivery status and expiry with explicit replace/resend and revoke controls. The migration does not send mail or backfill existing staff; direct API inserts queue an invitation but there is no background sender.
+2. `/join` guides account registration/sign-in, email verification and explicit acceptance. The database checks confirmed current email, pending/single-use status, seven-day expiry, MFA, active organisation/employee, account conflicts and active offboarding. It grants **employee only**, never a client-selected role, and never silently downgrades existing privileged members. UUID links are references, not bearer credentials. No service-role key is used. Email/account/status changes revoke pending invitations. Delivery attempts are reserved, rate-limited per pending invitation and explicitly recorded; renewal replaces the old invitation.
+3. **Compact onboarding** in the employee profile uses the existing versioned lifecycle tasks, completion/reopen buttons, progress and a full-checklist link. Tasks remain manual HR attestations, with the existing history and close/skip controls. Failure to start a case is recoverable through the full checklist page.
+4. **Automatic attendance — migration 012.** `attendance_month` derives contract hours for completed working days **before today in Europe/Bucharest**. Today and future days remain planned. Approved leave sets zero work; cancellation restores derived work. Manual records win and are never overwritten. HR/assigned managers retain per-day corrections; leave dates are corrected via the leave workflow. Missing/overlapping/inactive contracts do not create automatic work; the legacy eight-hour planning fallback remains when no unique contract exists. Historical terminated contracts require an explicit end date; suspension/change history is not reconstructed.
+5. Automatic rows are labelled `automatic` and feed benefit drafts. `private.benefit_sources` adds an automatic-attendance review flag; the full source snapshot still rejects stale approval and approved months keep their saved amounts. No cron or fabricated clock events. Contract/calendar edits can change unoverridden derived history, so this is not an immutable attendance ledger.
+6. **Contract HR review — migration 012.** The Contract tab records reviewer/time/current `review_version`. Every contract edit increments its database-maintained revision and makes the prior review stale. Direct calls enforce HR/tenant/access-state checks and clients cannot forge the review or revision. REGES remains disconnected. Future queue creation must check approval atomically and review all additional mapped payload data too.
+7. **Public homepage** for logged-out visitors, with discreet €2/employee/month pricing and tax details deferred to the offer. Signed-in users still continue to the dashboard. The separate `/hr-management-romania` page remains without inbound navigation/footer links. Both public pages are in the sitemap.
+8. Added invitation Auth return paths and production/local redirect allowlist entries in their separate Supabase config files. README, architecture, roadmap, REGES plan and `docs/onboarding-automation.md` describe deployment, manual checks and actual limitations.
+
+### Checks and release status
+
+- **Full suite: 70/70 tests passed**, including new verified-email/role/expiry/MFA/offboarding invitation cases, automatic attendance/calendar/leave/manual/future/ambiguous-contract cases, stale HR review and benefit integration. Existing database/Storage/payroll/PDF regressions also passed.
+- **Production build passed**, including TypeScript and the new `/join` route. Full ESLint found one render-time clock usage and an unused test variable; both were fixed, and targeted ESLint passed. The final UI change displays the stored expiry timestamp instead of evaluating a render-time clock. No business calculation changed after the full suite.
+- UI/browser and real email delivery remain for the user's manual checks. No server was started/stopped. The earlier payslip PDF visual QA remains valid; PDFs were not changed by this phase.
+- Initial Windows test-worker spawn was sandbox-blocked; the approved retry ran successfully. This was a local execution restriction, not a database or application failure.
+
+### Next release steps
+
+1. Review/apply `202609230011_employee_invitations.sql`, then `202609230012_attendance_contract_review.sql` after checking remote history. Do not deploy the new frontend against a schema missing them.
+2. Add **`https://www.mkdir.space/auth/confirm?next=/join`** to Supabase Auth's redirect allowlist; add the localhost equivalent for local tests. The production config is prepared separately. **Never push the root localhost config to production.**
+3. Verify app SMTP and `NEXT_PUBLIC_SITE_URL=https://www.mkdir.space` in Vercel, then deploy. Supabase account-confirmation emails have their own configuration. No live billing/REGES transmission was added.
+4. Follow `docs/onboarding-automation.md` using a dedicated test organisation and an email controlled by the user. New employee creation now intentionally attempts real email; do not use real staff as unannounced test recipients. The user starts the server themselves.
+5. Pending broader work remains fractional/partial-month payroll, privacy-pack adoption and actual export/erasure/restore procedures, real REGES integration, signing and Stripe collections reconciled to official SAGA invoices. Earlier provider/operator details and scope are preserved below.
+
+---
+
+## Earlier state — payroll expansion and provider privacy procedures (superseded by current release notes)
 
 **This section supersedes all historical state and resume instructions below.** The user resumed for broader payroll and organisational/provider GDPR procedures, requested an SMTP check and an explanation of variable Stripe totals, then confirmed SAGA for official invoices.
 

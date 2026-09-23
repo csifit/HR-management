@@ -49,6 +49,11 @@ export default async function RegesPage() {
           <ol className="integration-steps">
             <li>
               {ro
+                ? "HR verifică fiecare contract în profilul angajatului, fila Contract. Orice modificare invalidează verificarea pentru transmitere."
+                : "HR reviews each contract in the employee profile, Contract tab. Every change invalidates its submission review."}
+            </li>
+            <li>
+              {ro
                 ? "Verifică dreptul de acces pentru angajatorul corect în REGES-ONLINE."
                 : "Verify access to the correct employer in REGES-ONLINE."}
             </li>

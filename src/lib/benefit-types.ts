@@ -52,6 +52,7 @@ export type BenefitFlag =
   | "partial_month"
   | "disabled"
   | "missing_attendance"
+  | "automatic_attendance"
   | "full_absence"
   | "no_worked_days"
   | "manual_allocation"

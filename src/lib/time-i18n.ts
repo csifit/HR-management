@@ -29,6 +29,7 @@ const en = {
   other: "Other absence",
   none: "No absence",
   unrecorded: "Not recorded",
+  automatic: "Automatic · contract hours",
   start: "Start date",
   end: "End date",
   days: "days",
@@ -109,7 +110,7 @@ const en = {
   fromLeave: "From approved leave",
   beforeStart: "Before employment start",
   attendanceHelp:
-    "Planned hours default to 8 on working days; HR or the assigned manager can adjust each date. Unrecorded days are not assumed worked. Approved leave is filled automatically. This is not a clock-in or payroll calculation.",
+    "Completed working days (before today, Romanian time) automatically count the contract's daily hours. Today and future days remain planned. Approved leave overrides automatic work; manual entries are preserved. HR or the assigned manager can edit each day. Without a single applicable contract, no work is assumed (planning falls back to 8 hours). Company holidays must be configured. Automatic hours affect benefit drafts and are not clock-in evidence.",
   attendanceEditHelp:
     "Record actual hours or one full-day absence. For partial-day work, record hours with no full-day absence. Annual leave is recorded through approved requests.",
   back: "Back",
@@ -157,6 +158,7 @@ const ro: Record<keyof typeof en, string> = {
   other: "Altă absență",
   none: "Fără absență",
   unrecorded: "Neînregistrat",
+  automatic: "Automat · ore din contract",
   start: "Data de început",
   end: "Data de sfârșit",
   days: "zile",
@@ -239,7 +241,7 @@ const ro: Record<keyof typeof en, string> = {
   fromLeave: "Din concediu aprobat",
   beforeStart: "Înainte de angajare",
   attendanceHelp:
-    "Implicit sunt planificate 8 ore în zilele lucrătoare; HR sau managerul desemnat poate ajusta fiecare dată. Zilele neînregistrate nu sunt considerate lucrate. Concediul aprobat este completat automat. Nu este un ceas de pontaj sau un calcul salarial.",
+    "Zilele lucrătoare încheiate (anterioare zilei de azi, ora României) sunt calculate automat cu orele zilnice din contract. Azi și zilele viitoare rămân planificate. Concediul aprobat înlocuiește munca automată; înregistrările manuale se păstrează. HR sau managerul desemnat poate edita fiecare zi. Fără un singur contract aplicabil, munca nu este presupusă (planificare implicită: 8 ore). Configurează sărbătorile companiei. Orele automate influențează propunerile de beneficii și nu dovedesc prezența fizică.",
   attendanceEditHelp:
     "Înregistrează orele efective sau o absență de o zi întreagă. Pentru muncă parțială, introdu orele fără absență de zi întreagă. Concediul de odihnă se înregistrează prin cereri aprobate.",
   back: "Înapoi",

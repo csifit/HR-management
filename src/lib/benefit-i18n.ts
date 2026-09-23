@@ -56,7 +56,7 @@ const en = {
   prepare: "Prepare month",
   reprepare: "Prepare again",
   prepareHelp:
-    "Uses recorded worked days only. Fixed monthly amounts are not prorated automatically. Annual and flexible allocations are entered by HR. Employee and contract statuses are checked as currently recorded.",
+    "Uses manual entries and automatic contract hours for completed working days, excluding approved leave. Review automatic attendance before approval. Fixed monthly amounts are not prorated; HR enters annual/flexible allocations. Employee and contract statuses are checked as currently recorded.",
   replace:
     "I understand preparing again replaces all draft reviews and adjustments.",
   prepareConfirm: "Prepare a draft from the current enrolments and attendance.",
@@ -101,6 +101,7 @@ const en = {
   partial_month: "Partial month — review start/end dates",
   disabled: "Provider, benefit or enrolment is disabled",
   missing_attendance: "Attendance is incomplete",
+  automatic_attendance: "Includes automatic contract hours — review attendance",
   full_absence: "Absence for all planned days",
   no_worked_days: "No recorded worked days",
   manual_allocation: "HR allocation required",
@@ -181,7 +182,7 @@ const ro: BenefitDictionary = {
   prepare: "Pregătește luna",
   reprepare: "Pregătește din nou",
   prepareHelp:
-    "Se folosesc doar zilele lucrate înregistrate. Sumele lunare fixe nu se proratează automat. HR introduce alocările anuale și flexibile. Starea angajatului și a contractelor este cea înregistrată în prezent.",
+    "Se folosesc înregistrările manuale și orele automate din contract pentru zile încheiate, fără concediile aprobate. Verifică pontajul automat înainte de aprobare. Sumele fixe nu se proratează; HR introduce alocările anuale/flexibile. Starea angajatului și contractelor este cea curentă.",
   replace:
     "Înțeleg că pregătirea din nou înlocuiește toate verificările și ajustările din ciornă.",
   prepareConfirm: "Pregătește o ciornă din înscrierile și pontajul curent.",
@@ -227,6 +228,7 @@ const ro: BenefitDictionary = {
   partial_month: "Lună parțială — verifică datele de început/sfârșit",
   disabled: "Furnizorul, beneficiul sau înscrierea este dezactivată",
   missing_attendance: "Pontaj incomplet",
+  automatic_attendance: "Include ore automate din contract — verifică pontajul",
   full_absence: "Absență în toate zilele planificate",
   no_worked_days: "Nicio zi lucrată înregistrată",
   manual_allocation: "Este necesară alocarea HR",

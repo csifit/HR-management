@@ -9,6 +9,7 @@ import { requireUser, requireOrganisation, getMemberships } from "@/lib/auth";
 import { getDictionary } from "@/lib/locale";
 import { getLocale } from "@/lib/locale";
 import { platformDictionary } from "@/lib/platform-i18n";
+import { deliverEmployeeInvitation } from "@/lib/employee-invitations";
 import { canManage, type ActionState } from "@/lib/types";
 import {
   organisationSchema,
@@ -86,7 +87,7 @@ export async function signIn(
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: (await getDictionary()).invalidCredentials };
-  redirect("/dashboard");
+  redirect(form.get("next") === "/join" ? "/join" : "/dashboard");
 }
 export async function signUp(
   _previous: ActionState,
@@ -101,11 +102,12 @@ export async function signUp(
     password: parsed.data.password,
     options: {
       data: { full_name: parsed.data.full_name },
-      emailRedirectTo: `${siteUrl()}/auth/confirm`,
+      emailRedirectTo: `${siteUrl()}/auth/confirm${form.get("next") === "/join" ? "?next=/join" : ""}`,
     },
   });
   if (error) return { error: (await getDictionary()).authError };
-  if (data.session) redirect("/onboarding");
+  if (data.session)
+    redirect(form.get("next") === "/join" ? "/join" : "/onboarding");
   return { success: (await getDictionary()).checkEmail };
 }
 export async function forgotPassword(
@@ -211,6 +213,16 @@ export async function saveEmployee(
   const { data, error } = await query.select("id").single();
   if (error || !data)
     return { ...(await failure(error?.code)), values: values(form) };
+  if (!id && ["active", "onboarding"].includes(parsed.data.status)) {
+    // Creation is retained even when email is unavailable; HR sees and retries delivery.
+    await supabase.rpc("create_lifecycle_case", {
+      p_org: organisation.id,
+      p_employee: data.id,
+      p_kind: "onboarding",
+      p_target: parsed.data.start_date,
+    });
+    await deliverEmployeeInvitation(supabase, organisation, data.id);
+  }
   revalidatePath("/dashboard");
   revalidatePath("/employees");
   revalidatePath(`/employees/${data.id}`);

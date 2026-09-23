@@ -37,6 +37,7 @@ import type {
   LifecycleTask,
 } from "./document-types";
 import type { RegesConnection } from "./reges";
+import type { EmployeeInvitation } from "./invitation-types";
 type Table<Row> = {
   Row: Row;
   Insert: Partial<Row>;
@@ -47,6 +48,14 @@ type Table<Row> = {
 export type Database = {
   public: {
     Tables: {
+      employee_invitations: Table<EmployeeInvitation>;
+      contract_reviews: Table<{
+        organisation_id: string;
+        contract_id: string;
+        contract_version: number;
+        reviewed_by: string;
+        reviewed_at: string;
+      }>;
       document_deliveries: Table<{
         id: string;
         organisation_id: string;
@@ -79,6 +88,36 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      prepare_employee_invitation: {
+        Args: { p_org: string; p_employee: string; p_renew?: boolean };
+        Returns: EmployeeInvitation;
+      };
+      finish_employee_invitation: {
+        Args: {
+          p_org: string;
+          p_id: string;
+          p_attempt: number;
+          p_status: string;
+        };
+        Returns: undefined;
+      };
+      revoke_employee_invitation: {
+        Args: { p_org: string; p_id: string };
+        Returns: undefined;
+      };
+      my_employee_invitations: {
+        Args: Record<string, never>;
+        Returns: {
+          id: string;
+          organisation_name: string;
+          expires_at: string;
+        }[];
+      };
+      accept_employee_invitation: { Args: { p_id: string }; Returns: string };
+      review_contract_for_reges: {
+        Args: { p_org: string; p_contract: string; p_version: number };
+        Returns: undefined;
+      };
       prepare_document_email: {
         Args: {
           p_org: string;

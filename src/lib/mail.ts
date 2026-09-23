@@ -1,6 +1,7 @@
 import "server-only";
 import nodemailer from "nodemailer";
 import { mailConfigSchema } from "./mail-config";
+import { brand } from "./brand";
 export function mailConfig() {
   return mailConfigSchema.safeParse({
     host: process.env.SMTP_HOST,
@@ -21,6 +22,35 @@ export async function sendEmployeeDocument({
   bytes: Uint8Array;
   company: string;
 }): Promise<"accepted" | "failed" | "uncertain"> {
+  return sendMail({
+    fromName: company,
+    to: recipient,
+    subject: "Document de la angajator / Document from your employer",
+    text: `${company}\n\nAveți un document confidențial de la angajator în atașament.\nA confidential document from your employer is attached.\n\nAcest mesaj nu confirmă efectuarea unei plăți. / This message does not confirm a payment.`,
+    attachments: [
+      { filename, content: Buffer.from(bytes), contentType: "application/pdf" },
+    ],
+  });
+}
+export async function sendEmployeeInvitation(
+  recipient: string,
+  company: string,
+  url: string,
+) {
+  return sendMail({
+    fromName: company,
+    to: recipient,
+    subject: "Invitație în echipă / Employee invitation",
+    text: `${company}\n\nAi fost invitat(ă) în ${brand.name} cu acces de angajat. Creează sau autentifică un cont cu această adresă de email, confirmă adresa și acceptă invitația. Invitația expiră în 7 zile.\n\nYou are invited to ${brand.name} with employee access. Create or sign in to an account using this email address, verify it and accept the invitation. The invitation expires in 7 days.\n\n${url}\n\nDacă nu recunoști angajatorul, ignoră mesajul. / If you do not recognise this employer, ignore this message.`,
+  });
+}
+async function sendMail(message: {
+  fromName: string;
+  to: string;
+  subject: string;
+  text: string;
+  attachments?: { filename: string; content: Buffer; contentType: string }[];
+}): Promise<"accepted" | "failed" | "uncertain"> {
   const config = mailConfig();
   if (!config.success) return "failed";
   const v = config.data;
@@ -39,17 +69,11 @@ export async function sendEmployeeDocument({
   });
   try {
     const result = await transport.sendMail({
-      from: { name: company, address: v.from },
-      to: recipient,
-      subject: "Document de la angajator / Document from your employer",
-      text: `${company}\n\nAveți un document confidențial de la angajator în atașament.\nA confidential document from your employer is attached.\n\nAcest mesaj nu confirmă efectuarea unei plăți. / This message does not confirm a payment.`,
-      attachments: [
-        {
-          filename,
-          content: Buffer.from(bytes),
-          contentType: "application/pdf",
-        },
-      ],
+      from: { name: message.fromName, address: v.from },
+      to: message.to,
+      subject: message.subject,
+      text: message.text,
+      attachments: message.attachments,
     });
     return result.accepted.length === 1 ? "accepted" : "failed";
   } catch (error) {

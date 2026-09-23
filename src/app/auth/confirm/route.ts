@@ -9,7 +9,9 @@ export async function GET(request: NextRequest) {
   const next =
     url.searchParams.get("next") === "/update-password" || type === "recovery"
       ? "/update-password"
-      : "/dashboard";
+      : url.searchParams.get("next") === "/join"
+        ? "/join"
+        : "/dashboard";
   const supabase = await createClient();
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
