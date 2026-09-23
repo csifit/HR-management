@@ -5,7 +5,8 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "./supabase/server";
 import { isConfigured } from "./supabase/config";
 import { canManage } from "./types";
-export const requireUser = cache(async () => {
+// Only account security/enrollment may use the password-only authenticated session.
+export const requireSession = cache(async () => {
   if (!isConfigured()) redirect("/setup");
   const supabase = await createClient();
   const {
@@ -14,6 +15,17 @@ export const requireUser = cache(async () => {
   } = await supabase.auth.getUser();
   if (error || !user) redirect("/login");
   return { supabase, user };
+});
+export const requireUser = cache(async () => {
+  const context = await requireSession();
+  if (context.user.factors?.some((f) => f.status === "verified")) {
+    const { data, error } =
+      await context.supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (error || !data)
+      throw new Error("Account security could not be checked.");
+    if (data.currentLevel !== "aal2") redirect("/account/security");
+  }
+  return context;
 });
 export const getMemberships = cache(async () => {
   const { supabase, user } = await requireUser();

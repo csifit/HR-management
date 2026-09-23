@@ -36,6 +36,9 @@ export default async function PlatformLayout({
             </Link>
           )}
           <LanguageSwitch locale={locale} />
+          <Link className="button secondary" href="/account/security">
+            {locale === "ro" ? "Securitate" : "Security"}
+          </Link>
           <form action={signOut}>
             <button className="text-button">{d.signOut}</button>
           </form>

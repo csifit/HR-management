@@ -71,7 +71,31 @@ export function AppShell({
     { href: "/attendance", label: d.attendance, icon: Clock3 },
     { href: "/benefits", label: d.benefits, icon: Gift },
     { href: "/documents", label: d.documents, icon: FolderClosed },
-    ...(canManage(membership.role) ? [{href:"/lifecycle",label:locale==="ro"?"Angajare și plecare":"Onboarding & offboarding",icon:ListChecks}] : []),
+    ...(canManage(membership.role)
+      ? [
+          {
+            href: "/lifecycle",
+            label:
+              locale === "ro"
+                ? "Angajare și plecare"
+                : "Onboarding & offboarding",
+            icon: ListChecks,
+          },
+        ]
+      : []),
+    ...(canManage(membership.role)
+      ? [{ href: "/integrations/reges", label: "REGES-ONLINE", icon: Plug }]
+      : []),
+    ...(canManage(membership.role)
+      ? [
+          {
+            href: "/payroll",
+            label:
+              locale === "ro" ? "Calculator salarial" : "Payroll calculator",
+            icon: Files,
+          },
+        ]
+      : []),
   ];
   const current = path.startsWith("/settings/team")
     ? d.team
@@ -148,19 +172,19 @@ export function AppShell({
             </Link>
           ))}
           <span className="nav-section-label next-section">{d.comingNext}</span>
-          {[
-            { label: d.integrations, icon: Plug },
-          ].map(({ label, icon: Icon }) => (
-            <span
-              key={label}
-              className="nav-item nav-planned"
-              aria-disabled="true"
-            >
-              <Icon size={19} />
-              {label}
-              <span className="planned-dash">—</span>
-            </span>
-          ))}
+          {[{ label: d.integrations, icon: Plug }].map(
+            ({ label, icon: Icon }) => (
+              <span
+                key={label}
+                className="nav-item nav-planned"
+                aria-disabled="true"
+              >
+                <Icon size={19} />
+                {label}
+                <span className="planned-dash">—</span>
+              </span>
+            ),
+          )}
         </nav>
         <div className="sidebar-bottom">
           {canManage(membership.role) && (
@@ -187,6 +211,10 @@ export function AppShell({
               {d.platform}
             </Link>
           )}
+          <Link className="nav-item" href="/account/security">
+            <ShieldCheck size={19} />
+            {locale === "ro" ? "Securitatea contului" : "Account security"}
+          </Link>
           <div className="sidebar-user">
             <Avatar name={membership.display_name} />
             <div>

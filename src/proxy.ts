@@ -2,6 +2,13 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isConfigured, supabaseConfig } from "@/lib/supabase/config";
 export async function proxy(request: NextRequest) {
+  // Public editorial page: no session refresh, cookies, or HR queries for crawlers.
+  if (
+    ["/hr-management-romania", "/sitemap.xml", "/robots.txt"].includes(
+      request.nextUrl.pathname,
+    )
+  )
+    return NextResponse.next({ request });
   // Keep local auth cookies on the same host as email confirmation redirects.
   const origin = process.env.NEXT_PUBLIC_SITE_URL;
   if (

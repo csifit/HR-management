@@ -120,7 +120,7 @@ const en = {
   catalogueLimit:
     "Showing the first 100 matches. Search by name to find another record.",
   upcoming:
-    "Documents, lifecycle checklists and integrations are planned next.",
+    "REGES connectivity, payroll delivery and subscriptions are being prepared.",
 };
 type BenefitDictionary = { [K in keyof typeof en]: string };
 const ro: BenefitDictionary = {
@@ -245,7 +245,8 @@ const ro: BenefitDictionary = {
   noEnrolments: "Nu există beneficii înscrise pentru această lună.",
   catalogueLimit:
     "Sunt afișate primele 100 de rezultate. Caută după denumire pentru altă înregistrare.",
-  upcoming: "Urmează documentele, listele de activități și integrările.",
+  upcoming:
+    "Pregătim conectarea REGES, transmiterea documentelor salariale și abonamentele.",
 };
 export const benefitDictionary = (locale: Locale): BenefitDictionary =>
   locale === "ro" ? ro : en;

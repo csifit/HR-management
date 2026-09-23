@@ -2239,13 +2239,71 @@ td,
   font-size: 0.85rem;
   line-height: 1.5;
 }
-.document-heading { margin: 24px 0 18px; }
-.document-list { margin-top: 24px; }
-.document-meta { display: block; color: var(--muted); margin-top: 5px; font-size: .75rem; }
-.document-manage { margin-top: 10px; min-width: 190px; max-width: 350px; white-space: normal; }
-.document-manage summary, .time-form-card > summary { cursor: pointer; font-weight: 600; padding: 5px 0; }
-.document-note { white-space: pre-wrap; overflow-wrap: anywhere; }
-.document-task-state { color: var(--muted); font-size: .8rem; margin-left: 14px; }
+.document-heading {
+  margin: 24px 0 18px;
+}
+.security-page {
+  max-width: 640px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+.security-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
+}
+.security-secret {
+  display: block;
+  overflow-wrap: anywhere;
+  user-select: all;
+  margin: 12px 0;
+}
+.security-factors {
+  list-style: none;
+  padding: 0;
+}
+.security-factors li {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+.integration-steps {
+  padding-left: 20px;
+  line-height: 1.7;
+}
+.integration-steps li {
+  margin-bottom: 14px;
+}
+.document-list {
+  margin-top: 24px;
+}
+.document-meta {
+  display: block;
+  color: var(--muted);
+  margin-top: 5px;
+  font-size: 0.75rem;
+}
+.document-manage {
+  margin-top: 10px;
+  min-width: 190px;
+  max-width: 350px;
+  white-space: normal;
+}
+.document-manage summary,
+.time-form-card > summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 5px 0;
+}
+.document-note {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.document-task-state {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin-left: 14px;
+}
 .benefit-confirm input {
   margin-top: 4px;
   width: 18px;

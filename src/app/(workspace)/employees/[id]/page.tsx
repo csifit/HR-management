@@ -122,6 +122,18 @@ export default async function EmployeePage({
           {(manage || own) && (
             <Link href={`/benefits?employee=${employee.id}`}>{d.benefits}</Link>
           )}
+          {(manage || own) && (
+            <Link href={`/documents?employee=${employee.id}`}>
+              {d.documents}
+            </Link>
+          )}
+          {manage && (
+            <Link href={`/lifecycle?employee=${employee.id}`}>
+              {locale === "ro"
+                ? "Angajare și plecare"
+                : "Onboarding & offboarding"}
+            </Link>
+          )}
           <Link href={`/attendance?employee=${employee.id}`}>
             {d.attendance}
           </Link>

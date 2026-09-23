@@ -31,7 +31,12 @@ import type {
   BenefitAdapterKey,
   BenefitSummary,
 } from "./benefit-types";
-import type { EmployeeDocument, LifecycleCase, LifecycleTask } from "./document-types";
+import type {
+  EmployeeDocument,
+  LifecycleCase,
+  LifecycleTask,
+} from "./document-types";
+import type { RegesConnection } from "./reges";
 type Table<Row> = {
   Row: Row;
   Insert: Partial<Row>;
@@ -42,6 +47,17 @@ type Table<Row> = {
 export type Database = {
   public: {
     Tables: {
+      document_deliveries: Table<{
+        id: string;
+        organisation_id: string;
+        document_id: string;
+        recipient: string;
+        status: "pending" | "accepted" | "failed" | "uncertain";
+        requested_by: string | null;
+        created_at: string;
+        completed_at: string | null;
+      }>;
+      reges_connections: Table<RegesConnection>;
       employee_documents: Table<EmployeeDocument>;
       lifecycle_cases: Table<LifecycleCase>;
       lifecycle_tasks: Table<LifecycleTask>;
@@ -63,14 +79,103 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
-      prepare_employee_document: { Args: { p_org: string; p_employee: string; p_title: string; p_category: string; p_visibility: string; p_origin: string; p_filename: string; p_bytes: number }; Returns: string };
-      complete_employee_document: { Args: { p_org: string; p_id: string; p_version: number }; Returns: undefined };
-      update_employee_document: { Args: { p_org: string; p_id: string; p_version: number; p_action: string; p_visibility: string }; Returns: undefined };
-      create_lifecycle_case: { Args: { p_org: string; p_employee: string; p_kind: string; p_target: string }; Returns: string };
-      add_lifecycle_task: { Args: { p_org: string; p_case: string; p_version: number; p_title: string }; Returns: undefined };
-      update_lifecycle_task: { Args: { p_org: string; p_id: string; p_version: number; p_status: string; p_note: string }; Returns: undefined };
-      revoke_lifecycle_access: { Args: { p_org: string; p_id: string; p_version: number; p_user: string | null; p_note: string }; Returns: undefined };
-      close_lifecycle_case: { Args: { p_org: string; p_id: string; p_version: number; p_status: string; p_note: string }; Returns: undefined };
+      prepare_document_email: {
+        Args: {
+          p_org: string;
+          p_document: string;
+          p_version: number;
+          p_recipient: string;
+        };
+        Returns: string;
+      };
+      finish_document_email: {
+        Args: { p_org: string; p_id: string; p_status: string };
+        Returns: undefined;
+      };
+      save_reges_identifiers: {
+        Args: {
+          p_org: string;
+          p_version: number | null;
+          p_employer: string | null;
+          p_author: string | null;
+        };
+        Returns: undefined;
+      };
+      prepare_employee_document: {
+        Args: {
+          p_org: string;
+          p_employee: string;
+          p_title: string;
+          p_category: string;
+          p_visibility: string;
+          p_origin: string;
+          p_filename: string;
+          p_bytes: number;
+        };
+        Returns: string;
+      };
+      complete_employee_document: {
+        Args: { p_org: string; p_id: string; p_version: number };
+        Returns: undefined;
+      };
+      update_employee_document: {
+        Args: {
+          p_org: string;
+          p_id: string;
+          p_version: number;
+          p_action: string;
+          p_visibility: string;
+        };
+        Returns: undefined;
+      };
+      create_lifecycle_case: {
+        Args: {
+          p_org: string;
+          p_employee: string;
+          p_kind: string;
+          p_target: string;
+        };
+        Returns: string;
+      };
+      add_lifecycle_task: {
+        Args: {
+          p_org: string;
+          p_case: string;
+          p_version: number;
+          p_title: string;
+        };
+        Returns: undefined;
+      };
+      update_lifecycle_task: {
+        Args: {
+          p_org: string;
+          p_id: string;
+          p_version: number;
+          p_status: string;
+          p_note: string;
+        };
+        Returns: undefined;
+      };
+      revoke_lifecycle_access: {
+        Args: {
+          p_org: string;
+          p_id: string;
+          p_version: number;
+          p_user: string | null;
+          p_note: string;
+        };
+        Returns: undefined;
+      };
+      close_lifecycle_case: {
+        Args: {
+          p_org: string;
+          p_id: string;
+          p_version: number;
+          p_status: string;
+          p_note: string;
+        };
+        Returns: undefined;
+      };
       save_benefit_provider: {
         Args: {
           p_org: string;

@@ -4,28 +4,34 @@ One Next.js application and one Supabase PostgreSQL database. No microservices, 
 
 ## Data model
 
-| Entity                    | Ownership and purpose                                                                           |
-| ------------------------- | ----------------------------------------------------------------------------------------------- |
-| `organisations`           | Tenant identity, onboarding/contact details, access status/reason, version, creator, timestamps |
-| `organisation_users`      | Composite organisation/user membership; role and account display details                        |
-| `employees`               | Organisation-owned directory and employment basics; optional linked account and manager         |
-| `employment_contracts`    | Organisation and employee-owned contract details, salary, status, and optional parent contract  |
-| `leave_types`             | Tenant-owned leave categories, allowance behavior and availability                              |
-| `leave_balances`          | Per-employee/type/year allowance configured by HR                                               |
-| `work_calendar_days`      | Tenant working/non-working exceptions to Monday–Friday                                          |
-| `leave_requests`          | Full-day requests, counted-date snapshot, status, decision actor/reason and version             |
-| `attendance`              | Per-employee/day planned/worked hours, absence category, last editor and version                |
-| `audit_log`               | Append-only organisation-owned action history written by trusted triggers/functions             |
-| `private.platform_admins` | Operator-provisioned global platform identities, with no implicit HR access                     |
+| Entity                                               | Ownership and purpose                                                                           |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `organisations`                                      | Tenant identity, onboarding/contact details, access status/reason, version, creator, timestamps |
+| `organisation_users`                                 | Composite organisation/user membership; role and account display details                        |
+| `employees`                                          | Organisation-owned directory and employment basics; optional linked account and manager         |
+| `employment_contracts`                               | Organisation and employee-owned contract details, salary, status, and optional parent contract  |
+| `leave_types`                                        | Tenant-owned leave categories, allowance behavior and availability                              |
+| `leave_balances`                                     | Per-employee/type/year allowance configured by HR                                               |
+| `work_calendar_days`                                 | Tenant working/non-working exceptions to Monday–Friday                                          |
+| `leave_requests`                                     | Full-day requests, counted-date snapshot, status, decision actor/reason and version             |
+| `attendance`                                         | Per-employee/day planned/worked hours, absence category, last editor and version                |
+| `benefit_providers`, `benefits`, `employee_benefits` | Tenant catalogue and dated employee enrolments                                                  |
+| `benefit_runs`, `benefit_run_items`                  | Reviewed monthly benefit snapshots and approvals                                                |
+| `employee_documents`                                 | Tenant/employee metadata and private Storage path; pending, ready and archived states           |
+| `lifecycle_cases`, `lifecycle_tasks`                 | HR-only onboarding/offboarding history and scoped account revocation                            |
+| `reges_connections`                                  | Official employer/author identifiers, version and editor; no credentials                        |
+| `document_deliveries`                                | HR-only recipient, reservation and delivery outcome metadata                                    |
+| `audit_log`                                          | Append-only organisation-owned action history written by trusted triggers/functions             |
+| `private.platform_admins`                            | Operator-provisioned global platform identities, with no implicit HR access                     |
 
 Employee and contract IDs are globally unique, but references include `organisation_id` so cross-tenant employee, manager, account, and parent-contract links cannot be stored. A parent contract must belong to the same employee as its addendum. Organisation IDs and audit authors cannot be changed by authenticated API callers.
 
-Contracts hold salary separately from the employee directory. Managers therefore cannot retrieve salary by requesting extra directory columns. No CNP, medical details, birth date, home address, document binaries, or integration credentials are collected in this slice.
+Contracts hold salary separately from the employee directory. Managers therefore cannot retrieve salary by requesting extra directory columns. Structured employee fields do not collect CNP, birth date or home address. Private uploaded documents may contain sensitive information, so minimisation and retention procedures still matter. REGES identifiers are not credentials; no REGES token is collected.
 
 ## Request path
 
 1. The Next.js proxy refreshes Supabase session cookies. It does not make authorisation decisions.
-2. Server pages/actions call `requireUser()` which validates the session with `auth.getUser()`.
+2. Server pages/actions call `requireUser()` which validates the session with `auth.getUser()` and requires AAL2 once a verified factor exists. Only the standalone account-security route uses `requireSession()` to allow an AAL1 user to complete MFA.
 3. `requireOrganisation()` checks the selected cookie against live database memberships. The cookie is a preference, never authority.
 4. Every query includes an organisation filter. Every write derives its organisation from the verified context, not user input.
 5. PostgreSQL RLS and column grants independently enforce access for direct API requests too.
@@ -80,14 +86,34 @@ HR/owners see the tenant's catalogue and drafts. A linked employee or manager se
 
 `BenefitsProvider` adapters for Pluxee, Edenred, Up România and custom providers are explicit unavailable implementations. They never simulate success or send network requests. Adding a real adapter requires verified provider documentation and a server-only credential design.
 
-## Future additions
+## Documents, lifecycle and payroll
 
-Add each module with its own migration, organisation foreign key, policies, actions, and UI. Protected Storage documents, workflow checklists, and live provider adapters are intentionally absent until their phase. Integration secrets will need a server-only encrypted storage design and key lifecycle before any credentials are accepted. A normal PostgreSQL submission table can support REGES status tracking when required; successful provider calls must never be simulated in production.
+Document metadata and lifecycle records have tenant/employee composite keys, version checks, active-company write checks and audited RPCs. HR owns checklist access; linked employees/managers see only their own ready employee-visible nonarchived documents. Superadmins have no bypass. A pending document reserves an exact `organisation/document.pdf` path; the authenticated uploader can insert only that object. Restrictive Storage policies prevent other buckets' permissive policies from granting read/write/overwrite/delete access. The server parses uploaded PDFs before finalisation. No public/signed URLs are issued; downloads use the user's JWT.
+
+PDFs use a bundled Noto Sans font with Romanian glyph checks, A4 pagination and metadata. Generated payslips default to HR-only. Archive retains files/history indefinitely. Signed status is an HR attestation of an external signature, not cryptographic verification. The signature adapter rejects operations until a real provider is implemented.
+
+Lifecycle tasks preserve completion actors, notes, versions and closure history. The owner-only offboarding step removes only this company's membership and employee/manager account links, protecting self/final-owner access. Closure rejects regranted access. Auth accounts, other memberships and historical HR records remain. Checklist confirmations do not automatically change contracts, benefits or government records.
+
+The payroll module is a pure, effective-dated standard-case calculator. The server validates the current employee/contract and excludes recorded leave, absences and active benefits before generating a PDF. The PDF snapshots entered facts and computed results, but there is no structured payroll ledger or historical contract reconstruction yet. See [supported rules](payroll-rules.md); unsupported cases require separate handling. CAM is an indicative allocation, not employer-level tax filing.
+
+## MFA and email boundaries
+
+`private.session_meets_mfa()` checks the verified-factor table and JWT AAL. It gates role lookups, platform administration, organisation creation and otherwise independent own-membership reads, so database/Storage enforcement does not rely on route redirects. MFA is opt-in for all roles. A verified second authenticator is the supported self-service recovery preparation; administrative lost-factor recovery requires verified operator procedures.
+
+Email is explicit and HR-controlled. A document must be ready, employee-visible and nonarchived, with a recipient matching the current employee record. A database reservation serialises attempts and stores pending/accepted/failed/uncertain outcomes. TLS SMTP credentials exist only on the server. No automatic retries after ambiguous outcomes; an operator must reconcile provider logs first. SMTP acceptance is not inbox delivery, and copies already sent/downloaded cannot be recalled. The client never receives SMTP secrets or raw provider errors.
+
+## REGES, discovery and future additions
+
+The REGES preparation table stores paired employer/author UUIDs with owner-only edits, HR reads and optimistic versions. The unavailable adapter does not exchange credentials or submit messages. [The integration plan](reges-integration.md) describes remaining schema mapping, encrypted credentials, an ordered PostgreSQL outbox and asynchronous result reconciliation.
+
+The Romanian product page, sitemap and robots route bypass session refresh. The product page overrides root noindex; private routes remain authenticated/noindex. No application navigation links point to the product page, at the user's request. White-label text uses the configured brand.
+
+Each future module needs tenant keys, policies, actions and UI. Integration secrets require server-only encryption and key lifecycle before collection. Subscription billing remains a [proposal](billing-proposal.md). [Data protection requirements](data-protection.md) cover missing operational/legal and retention/rights procedures; no automatic compliance claim is made.
 
 ## Current limits
 
-- Organisation access is granted to already registered, confirmed accounts. Email invitations and membership removal are deferred.
+- Organisation access is granted to already registered, confirmed accounts. Invitations and global account erasure remain deferred; company access can be revoked through offboarding.
 - The employee's directory status and contract status are separately maintained; no automated legal or employment-status transitions are inferred.
 - Contract amendments have a safe parent relationship, but a formal amendment workflow and immutable contract version history are deferred.
 - Tax IDs and COR codes receive structural validation only; no government registry verification or legal compliance certification is claimed.
-- No statutory payroll, leave entitlement, benefit eligibility or tax calculation is implemented. Benefit allocations use configured amounts and HR review.
+- Automatic payroll covers only the documented standard 2026 cases. No automatic leave entitlement, benefit eligibility/tax treatment, D112 or bank execution is implemented. Benefit allocations use configured amounts and HR review.

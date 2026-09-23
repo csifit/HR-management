@@ -465,6 +465,27 @@ export function actionLabel(action: string, locale: Locale) {
       "Benefits month approved",
     ],
     "membership.updated": ["Acces actualizat", "Access updated"],
+    "membership.revoked": ["Acces revocat", "Access revoked"],
+    "reges.prepared": [
+      "Identificatori REGES salvați",
+      "REGES identifiers saved",
+    ],
+    "document.email_requested": [
+      "Trimitere document solicitată",
+      "Document email requested",
+    ],
+    "document.email_recorded": [
+      "Rezultat trimitere document",
+      "Document email result",
+    ],
+    "document.prepared": ["Document pregătit", "Document prepared"],
+    "document.ready": ["Document disponibil", "Document ready"],
+    "document.updated": ["Document actualizat", "Document updated"],
+    "lifecycle.created": ["Listă de verificare creată", "Checklist created"],
+    "lifecycle.task_added": ["Pas adăugat", "Checklist task added"],
+    "lifecycle.task_updated": ["Pas actualizat", "Checklist task updated"],
+    "lifecycle.access_checked": ["Acces verificat", "Company access checked"],
+    "lifecycle.closed": ["Listă închisă", "Checklist closed"],
   };
   return labels[action]?.[locale === "ro" ? 0 : 1] ?? action;
 }

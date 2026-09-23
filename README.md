@@ -15,9 +15,13 @@ A white-label HR workspace for Romanian companies. Next.js App Router, strict Ty
 - Full-day leave requests, manager/HR approvals, calendar/list views, yearly allowances and configurable leave types/work calendar.
 - Daily planned/worked hours and absence records, monthly attendance totals and automatic approved-leave integration.
 - Benefit providers/catalogue, employee enrolment, five calculation models and monthly HR review/approval with saved amounts.
-- Automatic audit events for organisation, membership, employee, contract, salary, leave and attendance changes.
+- Private PDF uploads/generation, employee visibility, archival, onboarding/offboarding checklists and owner-controlled company access revocation.
+- Optional authenticator-app MFA for every role, with database and Storage enforcement once enrolled.
+- Automatic standard-case 2026 payroll calculation and printable individual payslips; explicit HR-controlled email delivery through MXroute when configured.
+- REGES identifier preparation, data-protection guidance and a public Romanian product-discovery page.
+- Automatic audit events for organisation, membership, employee, contract, salary, leave, attendance, benefits, documents and lifecycle changes.
 
-Documents, REGES, onboarding checklists, and external provider integrations are later phases. Navigation labels identify planned modules. There is no payroll calculation, provider submission, simulated integration success, or production demo dataset.
+Live REGES/provider submissions, electronic signing, full payroll case coverage and Stripe billing remain future work. No integration success or production data is simulated. See `docs/checkpoint.md` for actual migration/deployment verification status.
 
 ## Local development
 
@@ -61,7 +65,7 @@ Alternatively, run `npx supabase start` with Docker for a fully local backend. A
 4. Colleagues register and confirm their own accounts. An owner can grant access by email under **Echipă și acces**, choose the role, and link the employee record. Re-entering an existing member's email updates their role. No invitation emails are sent by this flow.
 5. A manager sees only employees assigned to their account. A linked employee sees only their own profile/contracts. Owners and HR manage all HR records inside their organisation. A member's role in one organisation never applies to another.
 
-The final owner cannot be demoted, including under concurrent requests. Membership writes are available only through the authorised database function; the frontend cannot promote itself or change employee account links directly. Account removal and invitations are not part of this initial release.
+The final owner cannot be demoted, including under concurrent requests. Membership writes are available only through authorised database functions; the frontend cannot promote itself or change employee account links directly. An owner can revoke this company's access through an offboarding checklist; this preserves the auth account and other-company memberships. Invitations and global account deletion are not included.
 
 To provision the platform owner, run the following **once from a trusted SQL/admin session**, substituting the verified owner's email. It cannot be called from the app's public key:
 
@@ -95,7 +99,7 @@ Every status transition requires a reason and UI confirmation; the reason is vis
 
 Approved leave fills attendance automatically. Conflicting recorded work/absence or a zero-hour plan prevents approval; correct that day first. Approved leave must be cancelled before editing its attendance dates. Calendar changes affecting pending/approved leave require cancelling and resubmitting those requests. The calendar shows counts across all permitted requests, independent of list pagination.
 
-There is no clock-in/out, per-employee recurring schedule, half-day leave, automatic accrual, payroll engine or medical-document storage in this version. Do not enter diagnoses or medical details in decision reasons. The same tenant isolation, suspension/blocking and Superadmin boundaries apply to both modules.
+There is no clock-in/out, per-employee recurring schedule, half-day leave or automatic accrual. The separate standard-case payroll calculator does not calculate leave pay. Do not enter diagnoses or medical details in decision reasons. The same tenant isolation, suspension/blocking and Superadmin boundaries apply to both modules.
 
 ## Benefits setup and monthly preparation
 
@@ -109,6 +113,38 @@ There is no clock-in/out, per-employee recurring schedule, half-day leave, autom
 Preparation snapshots source data and compares it again before approval. Changes to attendance, relevant employment records, enrolments, configuration or annual spending require preparing again, which replaces draft adjustments. Optimistic versions also reject stale forms. Annual allocations across approved months cannot exceed the configured yearly limit; monthly flexible allocations cannot exceed their limit. Draft annual allocations do not reserve budget, but serialised approval and source checks prevent conflicting drafts from overspending. Monetary values are not duplicated in audit metadata. Review reasons are available to the employee after approval and must not contain medical details.
 
 `src/lib/benefit-providers.ts` defines the future provider adapter boundary. All adapters report disconnected/not implemented and reject submission; there are no credentials or network calls. Provider APIs, exports, statutory tax treatment, automated proration and changes to approved months are deferred.
+
+## Documents, checklists and payslips
+
+Apply migration 007 before using `/documents` and `/lifecycle`. Upload PDFs up to 10 MB to the private bucket using the authenticated Storage API; files are parsed before finalisation. HR chooses HR-only or employee-visible access. Linked employees/managers can read only their own ready employee-visible files, not assigned staff's documents. Downloads use the user's JWT, without public/signed URLs. Archive preserves the binary and history; there is no automatic retention purge or malware scanning.
+
+Generate an employee summary, an HR-authored letter or a payroll payslip. Local Noto Sans supports Romanian diacritics and is traced into the deployment. A signed status records HR's attestation of an external signature; the application does not create or verify electronic signatures. Upload a new file for a different signed copy.
+
+Checklists record completed/skipped tasks and preserve closed history. Only an owner can execute the offboarding access step. It removes this organisation's membership/account links and manager assignments, protects self/final-owner access and detects access regranted before closure. It does not delete the login account, erase retained records or change contracts/benefits/REGES automatically. Previously downloaded or emailed documents cannot be recalled.
+
+`/payroll` automatically computes standard full-time/full-month Romanian 2026 salary deductions and net pay, then saves an HR-only PDF. Review [the exact supported cases and sources](docs/payroll-rules.md) before use. Part-time, partial months, leave adjustments, benefits/vouchers, special exemptions and other deductions need separate handling. HR confirms deduction eligibility. This is not a full payroll engine, D112 filing or bank-payment facility. Have an accountant validate representative outputs before payments.
+
+## Optional MFA and document email
+
+Apply migration 008 before enabling MFA. Every user can enroll an authenticator at `/account/security`. Once enrolled, AAL2 is required for protected app routes, direct data RPCs and private Storage. Add a second authenticator before replacing a device. There is no password-only disable/recovery bypass; lost-factor recovery needs the operator's verified support procedure.
+
+Apply migration 010 for document delivery. Set `SMTP_HOST` to the actual MXroute server, `SMTP_PORT=465` (or 587 with required STARTTLS), `SMTP_USER`, `SMTP_PASSWORD` and `SMTP_FROM=admin@mkdir.space` in private local/deployment settings. Quote passwords containing `#` in dotenv files. No `NEXT_PUBLIC_` SMTP secrets. Supabase authentication-email SMTP is configured separately in Supabase.
+
+To verify connection/TLS/authentication without sending mail:
+
+```powershell
+node --env-file=.env.local --experimental-strip-types scripts/verify-smtp.mjs
+```
+
+After HR reviews a document and makes it employee-visible, its action menu allows explicit delivery to that employee's current email. The recipient must be confirmed; a PDF attachment is a permanent external copy. Accepted/pending/uncertain attempts block resending. Definite failures can be retried; uncertain results require checking provider logs first. SMTP acceptance is not proof of inbox delivery. Local SMTP authentication remains pending as recorded in the checkpoint; no real message has been sent.
+
+## REGES, data protection and discovery
+
+Apply migration 009 for `/integrations/reges`. Owners can save official employer/author identifiers and HR can read them. This is preparation only: no access tokens, test/production connection or submission is implemented. [The integration plan](docs/reges-integration.md) covers the remaining credential, schema, queue and result work.
+
+`/settings/data-protection` and [the operational assessment](docs/data-protection.md) explain implemented controls and remaining privacy notices, agreements, retention/rights, incident and recovery procedures. Technical controls alone do not establish GDPR compliance.
+
+`/hr-management-romania` is a public Romanian product page, intentionally absent from navigation/footer links. It links to the product origin and appears in `sitemap.xml`; private workspace routes retain authentication and noindex. Discovery/indexing/ranking, including Google AI, is not guaranteed. Submit the sitemap in Search Console after deployment. [The billing proposal](docs/billing-proposal.md) recommends one company subscription at €2 per billable employee per month; Stripe is not connected.
 
 ## Auth email configuration
 
@@ -163,9 +199,10 @@ npx supabase db query --linked --file tests/live-rls-smoke.sql
 npx supabase db query --linked --file tests/live-platform-smoke.sql
 npx supabase db query --linked --file tests/live-time-smoke.sql
 npx supabase db query --linked --file tests/live-benefits-smoke.sql
+npx supabase db query --linked --file tests/live-documents-smoke.sql
 ```
 
-The test suite runs all migrations in an embedded PostgreSQL engine (PGlite) with realistic Supabase auth roles. It checks cross-tenant reads/writes, foreign-key tenant constraints, salary access, self-promotion, account linking, immutable audit records, final-owner protection, platform boundaries, organisation access states, restoration and stale updates. Time-module checks cover balances, overlaps, working-day snapshots, approval rights, attendance conflicts, date validation and monthly totals. Benefits checks cover all five models, mandatory exception review, annual/flexible limits, changing source data, frozen approved records, employee visibility and unavailable provider adapters. All four live SQL smoke checks use temporary records inside transactions and roll everything back, including auth users and audit rows.
+The test suite runs all migrations in an embedded PostgreSQL engine (PGlite) with Supabase auth/Storage fixtures. It checks tenant boundaries, roles, stale updates, access states, time/benefit workflows, private documents, lifecycle revocation, MFA, REGES identifiers and email reservations. Pure tests verify supported payroll cases and PDF validity/pagination. SQL smoke scripts use temporary records inside transactions and roll everything back, including auth users and audit rows. They do not exercise actual Storage transfers, Auth MFA providers or SMTP delivery; those need separate service/UI checks. See the checkpoint for which live checks have run.
 
 ## Vercel deployment
 
