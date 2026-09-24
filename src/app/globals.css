@@ -2487,6 +2487,10 @@ td,
   margin-top: 5px;
   font-size: 12px;
 }
+.privacy-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 @media (max-width: 700px) {
   .onboarding-body {
     grid-template-columns: 1fr;

@@ -20,6 +20,7 @@ A white-label HR workspace for Romanian companies. Next.js App Router, strict Ty
 - Optional authenticator-app MFA for every role, with database and Storage enforcement once enrolled.
 - Automatic supported-case 2026 payroll calculation, including part-time contribution floors, declared meal vouchers and paid salary advances, with printable individual payslips; explicit HR-controlled email delivery through MXroute.
 - REGES identifier preparation, data-protection guidance and a public Romanian product-discovery page.
+- HR-only privacy-request register with deadlines, identity/response evidence, immutable change history and scoped employee review ZIP exports. See [privacy workflows](docs/privacy-workflows.md); migration 014 is required.
 - Automatic audit events for organisation, membership, employee, contract, salary, leave, attendance, benefits, documents and lifecycle changes.
 
 Live REGES/provider submissions, electronic signing, full payroll case coverage and Stripe billing remain future work. No integration success or production data is simulated. See `docs/checkpoint.md` for actual migration/deployment verification status.

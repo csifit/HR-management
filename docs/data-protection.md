@@ -1,6 +1,6 @@
 # Data protection implementation and operational requirements
 
-This is an implementation assessment and launch checklist, not a certification or a substitute for review by the operator's legal adviser/data-protection professional. Updated 23 September 2026.
+This is an implementation assessment and launch checklist, not a certification or a substitute for review by the operator's legal adviser/data-protection professional. Updated 24 September 2026.
 
 ## Responsibilities and inventory
 
@@ -14,6 +14,8 @@ The application stores employee contact/employment records, contract salaries, l
 
 ## Implemented technical controls
 
+Migration 014 adds an HR-only privacy-request register and employee review ZIP exports with identity checks, deadline/response tracking and immutable case history. See [privacy workflows](privacy-workflows.md) for exact data coverage, exclusions, limits and review/delivery steps. ZIP preparation does not complete a rights request. Automated erasure, delivery and whole-tenant exit remain unimplemented.
+
 - Authenticated, tenant-scoped role checks and database RLS; salary/document privacy independent of directory access; no Superadmin HR bypass.
 - Optional TOTP MFA. Once enrolled, database helper checks and protected routes reject AAL1 sessions. Test provider enrollment/recovery separately from SQL tests. MFA does not make a stolen, still-valid AAL2 token harmless.
 - Private Storage, constrained PDF uploads, authenticated downloads and default HR-only generated payslips. PDFs are parsed, but there is no malware scanning/CDR service; do not describe uploads as virus-free.
@@ -26,7 +28,7 @@ The application stores employee contact/employment records, contract salaries, l
 1. Confirm the service operator's legal identity, address and privacy contact. Publish a complete privacy notice and employee-facing employer notices describing purposes, bases, recipients, rights and retention. Do not rely on blanket employee consent for all HR processing.
 2. Complete processor agreements, subprocessor disclosures and appropriate transfer mechanisms for Supabase, Vercel, MXroute and future vendors. Verify actual deployment regions, support access and contractual safeguards; no EU-only hosting claim has been verified.
 3. Maintain a processing record and a category-specific retention schedule reviewed against employment/accounting obligations. **Archiving currently retains records and files indefinitely.** No automatic purge, tenant erasure, backup erasure or legal-hold workflow is implemented. Add reviewed export/erasure procedures before promising self-service rights fulfilment.
-4. Establish authenticated access/rectification/export/erasure requests and response tracking. For manual exports, scope SQL and files to the verified tenant/person, encrypt delivery, record approval and exclude other employees' records. Do not delete statutory records automatically when an account is removed.
+4. Adopt the new HR register for existing employee requests and verify its export workflow in the deployed environment. Keep a separate restricted process for other requesters, audit/support/provider records and omitted data. Review/redact the package and add required explanatory information before secure delivery; the local ZIP is not encrypted. Record the actual response. Do not delete statutory records automatically when an account is removed.
 5. Define incident triage, containment, evidence preservation and legally required notifications; assign contacts and timekeeping. Maintain backup/restore testing and document recovery objectives. Backups and restore tests have not been verified here.
 6. Assess whether a DPIA or DPO is required for the intended processing; record the assessment. Review privileged access periodically. Add malware scanning and audit-retention controls according to assessed risk.
 

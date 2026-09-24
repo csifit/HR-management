@@ -42,6 +42,8 @@ Remaining: accountant reference validation (including fractional earnings and ro
 
 ## Security, privacy, discovery and subscriptions
 
+Migration 014 adds the HR-only privacy-request register, identity/authority references, deadlines/extensions, response evidence and immutable case events. Employee review exports contain readable HTML, structured JSON, selected PDFs and a hashed scope manifest, assembled in the HR browser under the current user's permissions. See `privacy-workflows.md` for coverage and limitations. Automated delivery, erasure/restriction execution, other requester types, whole-tenant exit and complete rights-response assembly remain outstanding.
+
 Optional TOTP MFA for every role is implemented with database/Storage enforcement once enrolled. Production provider flows and recovery procedures still need verification. Cozumel SRL is identified as provider. The privacy pack now includes a draft customer DPA, provider handbook, vendor register and restricted-register templates for rights, incidents, support and service exit. These need legal/operational completion and adoption; notices, actual retention/export/erasure processes, verified vendor terms and tested backup/restoration remain outstanding.
 
 A public Romanian product page is indexable through its sitemap and has no inbound navigation/footer links. Search placement is not guaranteed. Stripe collections are proposed at €2 per billable employee/month, one company payment and a 30-day trial. The user will issue official invoices in SAGA. The billing proposal explains variable subscription quantities, internal Stripe Billing invoice records and SAGA reconciliation; count/trial/VAT/currency/grace rules must be finalised before building or charging.

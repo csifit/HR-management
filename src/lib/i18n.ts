@@ -418,6 +418,18 @@ export function moneyLabel(value: number, locale: Locale) {
 }
 export function actionLabel(action: string, locale: Locale) {
   const labels: Record<string, [string, string]> = {
+    "privacy.created": [
+      "Solicitare privind datele înregistrată",
+      "Privacy request recorded",
+    ],
+    "privacy.updated": [
+      "Solicitare privind datele actualizată",
+      "Privacy request updated",
+    ],
+    "privacy.export_prepared": [
+      "Export pentru verificare HR pregătit",
+      "HR review export prepared",
+    ],
     "employee.created": ["Angajat adăugat", "Employee added"],
     "employee.updated": ["Profil actualizat", "Profile updated"],
     "contract.created": ["Contract adăugat", "Contract added"],

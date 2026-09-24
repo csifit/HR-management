@@ -46,6 +46,9 @@ export default async function DataProtectionPage() {
             : "Technical controls and operational responsibilities."
         }
       />
+      <Link href="/settings/data-protection/requests" className="button primary">
+        {ro ? "Solicitări și exporturi de date" : "Privacy requests and data exports"}
+      </Link>
       <p className="notice">
         {ro
           ? "Controalele aplicației sprijină protecția datelor. Conformitatea GDPR necesită și documente, decizii și proceduri ale organizației; nu este o certificare automată."

@@ -118,6 +118,8 @@ Each future module needs tenant keys, policies, actions and UI. Integration secr
 
 ## Current limits
 
+Migration 014 adds `privacy_requests`, immutable `privacy_request_events` and `privacy_exports`, with HR-only SELECT and checked security-definer RPCs for mutations. The existing organisation lock, active-status and MFA-aware HR helpers apply; no service-role access is added. Employee export data use explicit projections in one scoped query, with recorded history plus a bounded current attendance calculation. A preparation log is distinct from response evidence. The HR browser obtains private PDF copies through existing Storage policies and assembles a ZIP with readable HTML, JSON and integrity/scope metadata. Raw private object paths stay out of the archive. See [privacy workflows](privacy-workflows.md) for limits and omitted records; no automatic erasure or employee delivery is implemented.
+
 - Organisation access is granted to already registered, confirmed accounts. Invitations and global account erasure remain deferred; company access can be revoked through offboarding.
 - The employee's directory status and contract status are separately maintained; no automated legal or employment-status transitions are inferred.
 - Contract amendments have a safe parent relationship, but a formal amendment workflow and immutable contract version history are deferred.

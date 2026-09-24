@@ -39,6 +39,12 @@ import type {
 } from "./document-types";
 import type { RegesConnection } from "./reges";
 import type { EmployeeInvitation } from "./invitation-types";
+import type {
+  PrivacyRequest,
+  PrivacyEvent,
+  PrivacyExport,
+  PrivacyExportPayload,
+} from "./privacy-types";
 type Table<Row> = {
   Row: Row;
   Insert: Partial<Row>;
@@ -49,6 +55,9 @@ type Table<Row> = {
 export type Database = {
   public: {
     Tables: {
+      privacy_requests: Table<PrivacyRequest>;
+      privacy_request_events: Table<PrivacyEvent>;
+      privacy_exports: Table<PrivacyExport>;
       employee_invitations: Table<EmployeeInvitation>;
       contract_reviews: Table<{
         organisation_id: string;
@@ -90,6 +99,48 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      create_privacy_request: {
+        Args: {
+          p_org: string;
+          p_employee: string;
+          p_kind: string;
+          p_received: string;
+          p_due: string;
+          p_channel: string;
+          p_summary: string;
+          p_assignee: string;
+        };
+        Returns: string;
+      };
+      update_privacy_request: {
+        Args: {
+          p_org: string;
+          p_id: string;
+          p_version: number;
+          p_status: string;
+          p_assignee: string;
+          p_identity: string;
+          p_due: string;
+          p_extension_reason: string;
+          p_notified: string | null;
+          p_response: string;
+          p_responded: string | null;
+          p_resolution: string;
+        };
+        Returns: undefined;
+      };
+      prepare_privacy_export: {
+        Args: {
+          p_org: string;
+          p_request: string;
+          p_version: number;
+          p_documents: { id: string; version: number }[];
+          p_from: string;
+          p_to: string;
+          p_confirm: boolean;
+        };
+        Returns: PrivacyExportPayload;
+      };
       save_work_schedule: {
         Args: {
           p_org: string;

@@ -1,6 +1,34 @@
 # Safe checkpoint — 24 September 2026
 
-## Current state — payroll amounts with bani
+## Current state — privacy requests and employee review exports
+
+**This section supersedes the older resume instructions below.** The user selected **Employee data exports and privacy requests**. Started from clean commit **`90cbb00` (`payroll 101`)**, which includes the completed bani payroll work. These new changes are local and uncommitted.
+
+### Implementation
+
+- **Migration 014:** `202609240014_privacy_requests.sql` adds the HR-only request register, immutable event snapshots and export preparation history. Database RPCs enforce tenant/employee scope, current HR ownership, active organisation status, enrolled MFA, identity verification, request/document versions and explicit export confirmation. Employees, managers and membership-independent Superadmins have no access; no HR bypass or service-role key was added.
+- **Settings → Data protection → Privacy requests and data exports** opens the RO/EN register. HR/owners record access, correction, erasure, restriction, portability and objection requests; receipt/channel/scope, assignee, deadlines/extensions, identity/authority references, actual response/withdrawal evidence and outcome. Open/overdue/all filters, employee search and pagination are included. Closed cases retain their history and cannot be edited. Case closure does not execute erasure, restriction or correction.
+- Access/portability requests in review with verified identity can prepare an employee review ZIP. Explicitly projected data cover profile/contracts, leave, manual attendance, calculated attendance for selected dates, schedules/calendar flags, benefits, lifecycle, document inventory/delivery metadata, invitations and current membership. Selected ready PDFs, including archived files, are downloaded under existing Storage RLS. No files are selected automatically.
+- The HR browser builds readable escaped HTML, structured JSON, selected PDFs, a scope/version/SHA-256 manifest and bilingual README using **fflate**. No public URLs or server-stored ZIP are created. Transfer failures prevent a complete ZIP from being offered; the preparation record may already exist. Preparing/downloading is distinct from actual response/delivery. The ZIP is not encrypted and must be reviewed/redacted and handled through the approved secure response process.
+- Limits: 50 PDFs / 50 MiB per package, 2 MiB compact structured JSON (4 MiB formatted browser bound), up to 366 days of calculated attendance, up to 200 documents on the selection screen. Larger cases need assisted processing; data are not silently truncated. Full source history and selected calculated-period scope are distinguished. No complete rights-response assembly, raw audit/Auth/support export, whole-tenant exit, automated email, deletion or legal holds.
+- Operating instructions and precise scope: **`docs/privacy-workflows.md`**. Data-protection assessment, operations-register template, architecture, roadmap and README are updated. The employer decides its requests; Cozumel assists on documented instructions. Provider-controller requests and non-employee requesters remain separate operational cases.
+
+### Verification and release boundaries
+
+- **96/96 full regression tests passed**, including nine new privacy cases: tenant/role restrictions, direct-write/anonymous denial, current HR assignee, immutable history, deadline/closure evidence, stale requests/documents, identity, MFA/status, cross-employee joins, file/record limits, ZIP integrity, HTML escaping and incomplete transfers. Tests use local PGlite and synthetic files; no production SQL/Storage/email was exercised.
+- **Full ESLint, production build including TypeScript, and `git diff --check` passed.** Initial focused-test failures were test fixture issues (restricted currency column, RPC argument count, anonymous transaction cleanup and too-short status reason), corrected before the successful full run. No production permissions were relaxed to make tests pass.
+- **Apply migration 014 after 001–013 before deploying this frontend.** It has not been applied remotely by the assistant. Existing remote migration state was not queried this turn; the earlier Supabase 403 is not proof of logout. Do not repeatedly ask for login or blindly repair/reapply migrations. No new environment variables are needed.
+- No commit, push, deployment, production HR mutation or actual email. Preserve **never run `npm run dev`, start another server or stop the user's server**. The user manages VS Code and manual screen checks.
+
+### Next steps
+
+1. User verifies existing migration history, applies **014**, and deploys after their normal review.
+2. Manual HR checks in RO/EN: create/review a synthetic request, test a month-end deadline and stale tab, download/read zero-PDF and selected-PDF ZIPs, verify the manifest/files and close with response evidence. Confirm employee/manager denial and suspended/blocked/MFA behaviour. Do not use a real employee disclosure for a smoke test. These signed-in browser/live Storage checks remain unverified.
+3. Adopt the controller/provider workflow, category retention and approved secure delivery process. Broader roadmap remains partial-month/leave payroll and accountant validation, REGES submission, signing, provider privacy/exit/erasure/restore operations and Stripe collections reconciled to SAGA. No next feature has been chosen yet.
+
+---
+
+## Earlier state — payroll amounts with bani
 
 **This section supersedes the older resume instructions below.** The user selected **Payroll: amounts with bani** after recurring work schedules. Started from clean commit **`8670636` (`work schedure and attendance`)**. This implementation is local and uncommitted.
 

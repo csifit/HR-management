@@ -8,6 +8,8 @@ For each customer-processing activity record: controller and contact; processor 
 
 ## Request log
 
+For requests concerning existing customer employee records, migration 014 now supplies an HR-only in-app register and review exports. Use the [privacy workflow](../privacy-workflows.md), verify the deployed flow and record actual responses separately from export preparation. Keep this separate template/process for provider-controller requests, applicants, other people and cases outside the application's scope. Never copy completed request logs or export packages into Git.
+
 | Case ID | Organisation / controller | Received date/channel | Type and minimal subject reference | Identity/authority check | Responsible person | Initial calendar-month deadline | Extension reason + date notified + revised deadline | Controller decision/instruction | Secure response reference/date | Closed/review date |
 | ------- | ------------------------- | --------------------- | ---------------------------------- | ------------------------ | ------------------ | ------------------------------- | --------------------------------------------------- | ------------------------------- | ------------------------------ | ------------------ |
 | [empty] |                           |                       |                                    |                          |                    |                                 |                                                     |                                 |                                |                    |
