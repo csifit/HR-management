@@ -20,6 +20,7 @@ import type {
   AttendanceAbsence,
   BalanceSummary,
   AttendanceDay,
+  WorkSchedule,
 } from "./time-types";
 import type {
   Benefit,
@@ -78,6 +79,7 @@ export type Database = {
       leave_types: Table<LeaveType>;
       leave_balances: Table<LeaveBalance>;
       work_calendar_days: Table<CalendarDay>;
+      work_schedules: Table<WorkSchedule>;
       leave_requests: Table<LeaveRequest>;
       attendance: Table<Attendance>;
       benefit_providers: Table<BenefitProvider>;
@@ -88,6 +90,20 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      save_work_schedule: {
+        Args: {
+          p_org: string;
+          p_employee: string | null;
+          p_effective_from: string;
+          p_weekdays: number[] | null;
+          p_version?: number | null;
+        };
+        Returns: undefined;
+      };
+      payroll_standard_schedule: {
+        Args: { p_org: string; p_employee: string; p_month: string };
+        Returns: boolean;
+      };
       prepare_employee_invitation: {
         Args: { p_org: string; p_employee: string; p_renew?: boolean };
         Returns: EmployeeInvitation;

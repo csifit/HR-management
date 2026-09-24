@@ -1,6 +1,29 @@
 # Safe checkpoint — 24 September 2026
 
-## Current state — employee workspace views
+## Current state — recurring work schedules
+
+**This section supersedes the older resume instructions below.** The user explicitly selected recurring organisation/employee work schedules as the next feature. Started from clean commit **`a9f03ad` (`employeee page`)**, which contains the employee-screen changes. This implementation is local and uncommitted.
+
+### Implementation
+
+- **Migration 013:** `202609240013_recurring_work_schedules.sql` adds effective-dated organisation/employee weekday schedules. Monday–Friday remains the default; individual patterns override company weekdays, and an explicit inheritance entry restores company rules. Date exceptions have highest priority.
+- HR/owners manage schedules under **Attendance → Work schedules** (`/attendance/settings`), with links from Attendance and Leave settings. RO/EN, current weekday summary, paginated history, future edits and read-only past entries are included. Managers retain attendance correction rights but cannot modify recurring schedules; employees retain their own read-only calendar.
+- New/edited schedule dates must be today or later (Europe/Bucharest). Earlier rules remain intact. The shared organisation lock, version checks, tenant/MFA/status checks and audit trail protect writes. Clients have SELECT only on the new table. No service-role use or automatic email.
+- Leave requests and automatic attendance resolve the employee's effective pattern. Changes conflicting with pending/approved leave roll back and require cancellation/resubmission first. Manual attendance is preserved, including manually recorded work on an otherwise non-working day. Benefit drafts reflect resulting attendance; approved snapshots stay fixed.
+- The current payroll calculator assumes Monday–Friday. Payslip generation checks the whole selected month's recurring pattern and refuses unsupported patterns for payroll review. This does not add tax calculations for compressed/six-day weeks.
+- No rotating shifts, varying daily hours, automatic holiday import, backdated schedule editing or immutable monthly attendance ledger. Contract hours still determine daily hours; other existing contract/calendar-date edits can affect derived history.
+
+### Verification and deployment
+
+- **80 distinct tests verified:** the full suite passed 79/80 initially; the new benefits fixture expectation omitted its pre-existing manual Friday work. After fixing that test expectation, all **20 benefits/schedule tests passed** on a focused rerun. No production logic changed after the full run. Coverage includes effective dates/inheritance, leave rollback, automatic/manual hours, benefits, permissions, tenant boundaries, MFA/status restrictions, stale updates and payroll scope.
+- **Production build and TypeScript passed**, including `/attendance/settings`. Full ESLint had no errors and one unused fixture variable warning; the variable was removed and targeted ESLint passed. Manual signed-in UI checks remain with the user. No server was started/stopped.
+- A read-only `npx supabase migration list` check returned **HTTP 403 privileges/access denied**. This is not proof of logout; do not repeatedly ask for login or blindly repair/reapply migrations. Remote history remains unverified.
+- **Next release action:** check remote history and apply migration **013 after 001–012**, then deploy this frontend. Migration 013 has NOT been applied remotely by the assistant. No commit/push/deployment, live HR mutation or actual email occurred.
+- Setup, precedence and manual checks: `docs/work-schedules.md`. README, architecture, roadmap and payroll scope were updated. Preserve the user's instruction: **never run `npm run dev`, start another server or stop their server**.
+
+---
+
+## Earlier state — employee workspace views
 
 **This section supersedes the older resume instructions below.** Started from the user's clean commit **`587cb28` (`employee onboerding a minor changes`)**, which contains the earlier onboarding/attendance work. The latest request is to simplify the employee sidebar/dashboard and show only personal contracts, leave, attendance and benefits.
 

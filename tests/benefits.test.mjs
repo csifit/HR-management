@@ -190,6 +190,36 @@ afterEach(async () => {
 });
 after(async () => db.close());
 
+test("per-day benefits use recurring schedules and preserve manual work on otherwise non-working days", async () => {
+  // Historical fixture; the public schedule RPC permits only today/future changes.
+  await db.query(
+    "insert into work_schedules(organisation_id,effective_from,weekdays,updated_by) values($1,'2026-07-01',array[1,2,3,4],$2)",
+    [org, users.owner],
+  );
+  const run = await prepare();
+  const daily = async () =>
+    (await items(run)).find((i) => i.model === "per_worked_day");
+  // The shared fixture already contains manual Friday work on July 3.
+  assert.equal(Number((await daily()).worked_days), 19);
+  assert.equal(Number((await daily()).suggested_amount), 855);
+  await as(users.owner, () =>
+    db.query("select save_attendance($1,$2,'2026-07-10',0,4,'none',null)", [
+      org,
+      employee,
+    ]),
+  );
+  await prepare("2026-07-01", await runVersion(run));
+  assert.equal(Number((await daily()).worked_days), 20);
+  assert.equal(Number((await daily()).suggested_amount), 900);
+  await db.query(
+    "insert into work_schedules(organisation_id,employee_id,effective_from,weekdays,updated_by) values($1,$2,'2026-07-01',array[1,2,3,4,5,6],$3)",
+    [org, employee, users.owner],
+  );
+  await prepare("2026-07-01", await runVersion(run));
+  assert.equal(Number((await daily()).worked_days), 27);
+  assert.equal(Number((await daily()).suggested_amount), 1215);
+});
+
 test("all five benefit models include automatic elapsed days and require exception review before approval", async () => {
   const run = await prepare();
   const rows = await items(run);

@@ -5,6 +5,7 @@ import { canManage } from "@/lib/types";
 import { dateLabel } from "@/lib/i18n";
 import { timeDictionary } from "@/lib/time-i18n";
 import { employeeDictionary } from "@/lib/employee-i18n";
+import { scheduleDictionary } from "@/lib/schedule-i18n";
 import { timeEmployees } from "@/lib/time-data";
 import { singleParam, monthParam, attendanceTotals } from "@/lib/time";
 import { PageHeader } from "@/components/ui";
@@ -47,7 +48,13 @@ export default async function AttendancePage({
       <PageHeader
         title={self ? ed.attendance : d.attendance}
         description={self ? ed.attendanceIntro : d.attendanceIntro}
-      />
+      >
+        {canManage(membership.role) && (
+          <Link className="button secondary" href="/attendance/settings">
+            {scheduleDictionary(locale).title}
+          </Link>
+        )}
+      </PageHeader>
       <form className="time-filters" action="/attendance">
         {!self && (
           <label className="field time-field">

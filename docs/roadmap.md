@@ -14,6 +14,8 @@ Employee creation now attempts an MXroute invitation with employee-only acceptan
 
 ## Phase 3 — Leave and attendance
 
+Migration 013 adds effective-dated organisation/employee weekday schedules, return to inheritance, read-only historical entries and transactional checks against pending/approved leave. Company date exceptions override these patterns. See `work-schedules.md` for rollout and limitations; rotating shifts remain future work.
+
 Implemented: full-day annual, medical, unpaid and configurable leave types; manually configured yearly allowances with approved/pending/available totals; employee requests, manager/HR decisions without self approval, cancellation, calendar/list views; daily planned/worked hours, monthly totals and absence categories. Approved leave appears automatically in attendance. Working calendar exceptions, audit, tenant boundaries and access-state enforcement are included.
 
 Setup requires HR to configure yearly allowances and public holidays/company exceptions. Completed working days now count contract hours automatically, per the user's choice, with approved leave taking precedence and manual corrections preserved. Today/future days remain planned. Missing/ambiguous/inactive contracts do not produce assumed work; the legacy eight-hour planning fallback remains. No clock-in/out, shift calendars, partial-day leave, automatic legal accrual or automatic leave-pay calculation.

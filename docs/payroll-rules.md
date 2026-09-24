@@ -4,6 +4,8 @@ Rule identifier: `RO-2026-monthly-v2`. Reviewed against primary sources on 23 Se
 
 ## Supported facts and calculations
 
+With migration 013, payslip generation requires a Monday–Friday recurring schedule throughout the selected month. Other weekday patterns need separate payroll review; adding attendance schedules does not expand the tax calculator's supported contract assumptions.
+
 The calculator accepts whole-RON basic salary, fully taxable cash bonuses, legally issued meal vouchers and salary advances already paid for full-month Romanian tax-resident employees under normal working conditions during January–December 2026. Normal full time is eight hours/day; shorter contractual schedules are supported with the basic minimum scaled to hours. CAS, CASS, income tax, personal deductions, net cash pay and the remaining payment are computed automatically. CAM and employer cost are indicative employee allocations; aggregate employer rounding is not a tax-return calculation.
 
 The basic minimum is RON 4,050 through June and RON 4,325 from July. The RON 300/200 allowance applies only to full-time primary employment at the exact statutory basic minimum, within the RON 4,300/4,600 cash-gross caps, with no disqualifying basic-pay reduction. Meal vouchers do not consume these allowance caps. Part-time contracts do not receive this allowance.

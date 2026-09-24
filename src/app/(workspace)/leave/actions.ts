@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireOrganisation } from "@/lib/auth";
 import { getLocale } from "@/lib/locale";
 import { timeDictionary } from "@/lib/time-i18n";
+import { scheduleDictionary } from "@/lib/schedule-i18n";
 import { canManage, type ActionState } from "@/lib/types";
 import {
   leaveRequestSchema,
@@ -13,11 +14,13 @@ import {
   allowanceSchema,
   calendarDaySchema,
   attendanceSchema,
+  workScheduleSchema,
 } from "@/lib/time-validation";
 
 async function result(error: { code?: string } | null): Promise<ActionState> {
   const d = timeDictionary(await getLocale());
   const errors: Record<string, string> = {
+    S0001: scheduleDictionary(await getLocale()).invalidDate,
     "42501": d.denied,
     P0004: d.inactive,
     P0006: d.stale,
@@ -36,7 +39,25 @@ async function result(error: { code?: string } | null): Promise<ActionState> {
   revalidatePath("/leave", "layout");
   revalidatePath("/attendance", "layout");
   revalidatePath("/dashboard");
+  revalidatePath("/benefits", "layout");
   return { success: d.saved };
+}
+export async function updateWorkSchedule(
+  _state: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  form.set("weekdays", form.getAll("weekdays").map(String).join(","));
+  const p = await prepare(workScheduleSchema, form, true);
+  if (p.error) return p.error;
+  const { context: c, data: v } = p;
+  const { error } = await c.supabase.rpc("save_work_schedule", {
+    p_org: c.organisation.id,
+    p_employee: v.employee_id,
+    p_effective_from: v.effective_from,
+    p_weekdays: v.mode === "inherit" ? null : v.weekdays,
+    p_version: v.version,
+  });
+  return { ...(await result(error)), ...(error ? { values: p.values } : {}) };
 }
 async function prepare<T>(schema: z.ZodType<T>, form: FormData, hr = false) {
   const context = await requireOrganisation();

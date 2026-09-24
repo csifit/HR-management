@@ -79,3 +79,13 @@ export type EmployeeOption = {
   manager_user_id: string | null;
   start_date: string;
 };
+export type WorkSchedule = {
+  id: string;
+  organisation_id: string;
+  employee_id: string | null;
+  effective_from: string;
+  weekdays: number[] | null;
+  version: number;
+  updated_by: string;
+  updated_at: string;
+};

@@ -2252,6 +2252,35 @@ td,
 .attendance-calendar-empty {
   background: var(--surface-subtle, #f8fafc);
 }
+.schedule-weekdays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+}
+.schedule-weekdays legend {
+  padding: 0 6px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+.schedule-weekdays label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+.schedule-weekdays input {
+  width: 17px;
+  height: 17px;
+}
+.schedule-weekdays:disabled {
+  opacity: 0.55;
+}
+.schedule-history-title {
+  margin-top: 24px;
+}
 @media (max-width: 760px) {
   .time-settings-grid {
     grid-template-columns: 1fr;

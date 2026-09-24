@@ -12,6 +12,23 @@ export const timeDate = z
     );
   });
 const version = z.coerce.number().int().positive().max(Number.MAX_SAFE_INTEGER);
+export const workScheduleSchema = z
+  .object({
+    employee_id: z.union([z.uuid(), z.literal("")]).transform((v) => v || null),
+    effective_from: timeDate,
+    mode: z.enum(["custom", "inherit"]),
+    weekdays: z
+      .string()
+      .transform((v) => (v ? v.split(",").map(Number) : []))
+      .pipe(z.array(z.number().int().min(1).max(7)).max(7))
+      .refine((v) => new Set(v).size === v.length),
+    version: z
+      .union([z.literal(""), version])
+      .transform((v) => (v === "" ? null : v)),
+  })
+  .refine((v) =>
+    v.mode === "inherit" ? v.employee_id !== null : v.weekdays.length > 0,
+  );
 export const leaveRequestSchema = z
   .object({
     employee_id: z.uuid(),

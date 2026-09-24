@@ -459,6 +459,10 @@ export function actionLabel(action: string, locale: Locale) {
       "Work calendar updated",
     ],
     "attendance.saved": ["Pontaj salvat", "Attendance saved"],
+    "calendar.schedule_updated": [
+      "Program de lucru actualizat",
+      "Work schedule updated",
+    ],
     "benefit.provider_saved": [
       "Furnizor de beneficii salvat",
       "Benefit provider saved",

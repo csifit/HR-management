@@ -93,7 +93,7 @@ const en = {
     "Categories and allowance behavior are fixed after creation. Rename or disable a type to preserve request history.",
   workCalendar: "Work calendar exceptions",
   calendarHelp:
-    "Monday–Friday is the default. Add holidays, company closure dates or exceptional working days. Public holidays are not imported automatically. Saved requests retain their counted dates.",
+    "Date exceptions apply to the whole organisation and override recurring work schedules. Add holidays, company closure dates or exceptional working days. Public holidays are not imported automatically. Saved requests retain their counted dates.",
   working: "Working day",
   nonWorking: "Non-working day",
   label: "Description",
@@ -224,7 +224,7 @@ const ro: Record<keyof typeof en, string> = {
     "Categoria și utilizarea soldului nu se schimbă după creare. Redenumește sau dezactivează tipul pentru a păstra istoricul cererilor.",
   workCalendar: "Excepții în calendarul de lucru",
   calendarHelp:
-    "Implicit se lucrează luni–vineri. Adaugă sărbători, zile de închidere sau zile lucrătoare excepționale. Sărbătorile legale nu sunt importate automat. Cererile salvate păstrează zilele calculate.",
+    "Excepțiile pentru date specifice se aplică întregii organizații și au prioritate față de programele recurente. Adaugă sărbători, zile de închidere sau zile lucrătoare excepționale. Sărbătorile legale nu sunt importate automat. Cererile salvate păstrează zilele calculate.",
   working: "Zi lucrătoare",
   nonWorking: "Zi nelucrătoare",
   label: "Descriere",

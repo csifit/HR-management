@@ -64,7 +64,9 @@ Employee/contract triggers write actor, organisation, action, entity, timestamp,
 
 ## Leave and attendance
 
-All five time tables have tenant foreign keys and RLS. Employee-specific data follows `can_read_employee`: HR/owner sees the tenant, managers their assigned staff plus themselves, and linked employees themselves. Types/calendar are tenant-wide. Superadmins gain no implicit HR access. Authenticated callers have SELECT only; every write uses a checked RPC deriving author/tenant from the session.
+Time tables have tenant foreign keys and RLS. Employee-specific data follows `can_read_employee`: HR/owner sees the tenant, managers their assigned staff plus themselves, and linked employees themselves. Types/calendar and organisation schedules are tenant-wide. Superadmins gain no implicit HR access. Authenticated callers have SELECT only; every write uses a checked RPC deriving author/tenant from the session.
+
+Migration 013 adds `work_schedules`: organisation/employee effective dates, ISO weekdays and versions. Null employee weekdays mean inheritance. Resolution is company date exception → latest applicable employee pattern → latest organisation pattern → Monday–Friday. The HR-only writer takes the same organisation lock as leave/attendance, validates today-or-future changes, rejects stale writes, checks resulting days against pending/approved leave and audits changes. Historical schedule writes and direct client mutations are denied. Leave and attendance use the same employee-aware resolver. Payroll generation checks the whole month's recurring pattern against its Monday–Friday assumption.
 
 Time mutations lock the organisation row, require active status and serialize allowance changes, requests, calendar changes, decisions and attendance. This prevents concurrent requests exceeding balances or creating overlap and coordinates with suspension/blocking. Decisions and attendance additionally compare submitted versions to reject stale edits.
 

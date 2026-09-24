@@ -14,6 +14,7 @@ A white-label HR workspace for Romanian companies. Next.js App Router, strict Ty
 - Owner-managed access for existing confirmed accounts, including linking a user to an employee record.
 - Full-day leave requests, manager/HR approvals, calendar/list views, yearly allowances and configurable leave types/work calendar.
 - Daily planned/worked hours and absence records, monthly attendance totals and automatic approved-leave integration.
+- Effective-dated organisation/employee weekday schedules, inherited defaults, historical protection and leave-conflict checks.
 - Benefit providers/catalogue, employee enrolment, five calculation models and monthly HR review/approval with saved amounts.
 - Private PDF uploads/generation, employee visibility, archival, onboarding/offboarding checklists and owner-controlled company access revocation.
 - Optional authenticator-app MFA for every role, with database and Storage enforcement once enrolled.
@@ -105,7 +106,9 @@ Automatic days are labelled separately and calculated at read time, without a cr
 
 Approved leave fills attendance automatically. Conflicting recorded work/absence or a zero-hour plan prevents approval; correct that day first. Approved leave must be cancelled before editing its attendance dates. Calendar changes affecting pending/approved leave require cancelling and resubmitting those requests. The calendar shows counts across all permitted requests, independent of list pagination.
 
-There is no clock-in/out, per-employee recurring schedule, half-day leave or automatic accrual. The separate standard-case payroll calculator does not calculate leave pay. Do not enter diagnoses or medical details in decision reasons. The same tenant isolation, suspension/blocking and Superadmin boundaries apply to both modules.
+Migration **013** adds **Attendance → Work schedules** for HR/owners. Choose organisation weekdays and employee overrides, effective today or later. Employee patterns can return to the organisation default; company date exceptions take precedence. See [schedule setup and release checks](docs/work-schedules.md).
+
+There is no clock-in/out, rotating shift calendar, half-day leave or automatic accrual. The separate payroll calculator does not calculate leave pay and refuses non-Monday–Friday recurring schedules. Do not enter diagnoses or medical details in decision reasons. The same tenant isolation, suspension/blocking and Superadmin boundaries apply to both modules.
 
 ## Benefits setup and monthly preparation
 

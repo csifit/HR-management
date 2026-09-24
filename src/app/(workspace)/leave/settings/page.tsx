@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireHR } from "@/lib/auth";
 import { getLocale } from "@/lib/locale";
 import { timeDictionary } from "@/lib/time-i18n";
+import { scheduleDictionary } from "@/lib/schedule-i18n";
 import { timeEmployees } from "@/lib/time-data";
 import { singleParam, todayInRomania } from "@/lib/time";
 import { PageHeader } from "@/components/ui";
@@ -59,7 +60,11 @@ export default async function LeaveSettings({
       <Link className="back-link" href="/leave">
         ← {d.back}
       </Link>
-      <PageHeader title={d.settings} />
+      <PageHeader title={d.settings}>
+        <Link className="button secondary" href="/attendance/settings">
+          {scheduleDictionary(locale).title}
+        </Link>
+      </PageHeader>
       <form className="time-filters" action="/leave/settings">
         <label className="field time-field">
           <span>{d.search}</span>

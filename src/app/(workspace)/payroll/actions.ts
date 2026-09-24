@@ -7,6 +7,7 @@ import {
 } from "@/lib/document-actions";
 import { payrollSchema, calculatePayroll } from "@/lib/payroll";
 import { payrollDictionary, payslipBody } from "@/lib/payroll-i18n";
+import { scheduleDictionary } from "@/lib/schedule-i18n";
 import { getLocale } from "@/lib/locale";
 import { generateEmployeePdf } from "@/lib/document-pdf";
 import { brand } from "@/lib/brand";
@@ -30,7 +31,7 @@ export async function generatePayslip(
     monthEnd = new Date(Date.UTC(2026, Number(v.month.slice(5)), 0))
       .toISOString()
       .slice(0, 10);
-  const [employee, contracts, leave, attendance] = await Promise.all([
+  const [employee, contracts, leave, attendance, schedule] = await Promise.all([
     c.supabase
       .from("employees")
       .select("*")
@@ -60,9 +61,22 @@ export async function generatePayslip(
       .gte("day", monthStart)
       .lte("day", monthEnd)
       .neq("absence", "none"),
+    c.supabase.rpc("payroll_standard_schedule", {
+      p_org: c.organisation.id,
+      p_employee: v.employee_id,
+      p_month: monthStart,
+    }),
   ]);
-  if (employee.error || contracts.error || leave.error || attendance.error)
+  if (
+    employee.error ||
+    contracts.error ||
+    leave.error ||
+    attendance.error ||
+    schedule.error
+  )
     return { error: d.mismatch, values: p.values };
+  if (!schedule.data)
+    return { error: scheduleDictionary(locale).payroll, values: p.values };
   const e = employee.data,
     contract = contracts.data[0];
   if (
