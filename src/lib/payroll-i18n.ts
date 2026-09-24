@@ -30,7 +30,7 @@ const en = {
   standard:
     "I confirm: Romanian tax resident, normal working conditions and a full month on the entered schedule; cash salary and legally issued meal vouchers only. No leave adjustments, partial month, other benefits, income-tax exemptions, other deductions or garnishments. The entered advance was already paid for this payroll month.",
   scope:
-    "Supports full months in 2026, normal conditions and whole-RON amounts. Part-time CAS/CASS top-ups are paid by the employer. Meal vouchers are separate from cash pay; advances reduce the remaining payment, not taxes. Fractional-leu amounts, partial months, leave adjustments, other benefits and D112 need separate handling.",
+    "Supports full months in 2026, normal conditions and RON amounts with up to two decimal places. Part-time CAS/CASS top-ups are paid by the employer. Meal vouchers are separate from cash pay; advances reduce the remaining payment, not taxes. Partial months, leave adjustments, other benefits and D112 need separate handling.",
   calculate: "Calculate",
   generate: "Save payslip PDF",
   invalid: "Check the payroll fields and supported-case confirmation.",
@@ -45,7 +45,8 @@ const en = {
   personalDeduction: "Basic personal deduction",
   youngDeduction: "Additional young-person deduction",
   childrenDeduction: "Additional child deduction",
-  taxBase: "Income tax base",
+  taxBaseBeforeRounding: "Taxable income before rounding",
+  taxBase: "Income tax base (rounded)",
   incomeTax: "Income tax (10%)",
   net: "Net cash salary before advance",
   payable: "Cash remaining to pay",
@@ -94,7 +95,7 @@ const ro: typeof en = {
   standard:
     "Confirm: rezident fiscal român, condiții normale și lună completă cu programul introdus; doar salariu în bani și tichete de masă acordate legal. Fără ajustări de concediu, lună parțială, alte beneficii, scutiri de impozit, alte deduceri sau popriri. Avansul introdus a fost deja plătit pentru această lună salarială.",
   scope:
-    "Acceptă luni complete din 2026, condiții normale și sume în lei întregi. Diferențele CAS/CASS pentru timp parțial sunt suportate de angajator. Tichetele se separă de salariul în bani; avansul reduce restul de plată, nu taxele. Sumele cu bani, lunile parțiale, concediile, alte beneficii și D112 necesită tratare separată.",
+    "Acceptă luni complete din 2026, condiții normale și sume în lei și bani, cu maximum două zecimale. Diferențele CAS/CASS pentru timp parțial sunt suportate de angajator. Tichetele se separă de salariul în bani; avansul reduce restul de plată, nu taxele. Lunile parțiale, concediile, alte beneficii și D112 necesită tratare separată.",
   calculate: "Calculează",
   generate: "Salvează fluturașul PDF",
   invalid: "Verifică datele salariale și confirmarea cazului acceptat.",
@@ -109,7 +110,8 @@ const ro: typeof en = {
   personalDeduction: "Deducere personală de bază",
   youngDeduction: "Deducere suplimentară pentru tineri",
   childrenDeduction: "Deducere suplimentară pentru copii",
-  taxBase: "Bază impozit pe venit",
+  taxBaseBeforeRounding: "Venit impozabil înainte de rotunjire",
+  taxBase: "Bază impozit pe venit (rotunjită)",
   incomeTax: "Impozit pe venit (10%)",
   net: "Salariu net în bani, înainte de avans",
   payable: "Rest de plată în bani",
@@ -142,6 +144,7 @@ export const payrollRows = [
   "personalDeduction",
   "youngDeduction",
   "childrenDeduction",
+  "taxBaseBeforeRounding",
   "taxBase",
   "incomeTax",
   "net",
@@ -186,6 +189,8 @@ export function payslipBody(
   });
   const ro = locale === "ro";
   const rows = payrollRows.filter((k) => {
+    if (k === "taxBaseBeforeRounding")
+      return result.taxBaseBeforeRounding !== result.taxBase;
     if (["cashGross", "meals", "healthBase"].includes(k))
       return result.meals > 0;
     if (["advance", "payable"].includes(k)) return result.advance > 0;

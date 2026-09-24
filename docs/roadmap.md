@@ -36,9 +36,9 @@ Implemented locally: owner-managed employer/author identifiers and a clearly dis
 
 ## Phase 7 — Payroll and accounting
 
-The user explicitly requested an in-app payroll calculator. Implemented locally: effective-dated full-month 2026 CAS/CASS/income-tax and deduction calculations, net pay and printable private payslips. The selected expansion adds part-time contribution floors/evidenced exceptions, declared meal vouchers and paid salary advances. HR confirms eligibility and issuance; the current contract, hours and salary are checked before generation. See `payroll-rules.md` for precise supported facts, whole-RON limits and sources.
+The user explicitly requested an in-app payroll calculator. Implemented locally: effective-dated full-month 2026 CAS/CASS/income-tax and deduction calculations, net pay and printable private payslips. Expansions add part-time contribution floors/evidenced exceptions, declared meal vouchers, paid salary advances and two-decimal amounts with integer-bani arithmetic (v3). HR confirms eligibility and issuance; the current contract, hours and salary are checked before generation. See `payroll-rules.md` for precise supported facts, rounding and sources.
 
-Remaining: accountant reference validation, fractional-leu earnings, partial months and leave pay, other benefits, income-tax exemptions, other deductions, corrections/payroll ledger, D112 and accounting exports/adapters. No bank payment execution. Broader payroll coverage must be added as tested, versioned rules, never inferred silently.
+Remaining: accountant reference validation (including fractional earnings and rounding boundaries), partial months and leave pay, other benefits, income-tax exemptions, other deductions, corrections/payroll ledger, D112 and accounting exports/adapters. No bank payment execution. Broader payroll coverage must be added as tested, versioned rules, never inferred silently.
 
 ## Security, privacy, discovery and subscriptions
 

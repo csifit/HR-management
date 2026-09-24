@@ -101,6 +101,45 @@ test("expanded payslip includes voucher, employer top-up and advance facts with 
   assert.ok(pdf.getPageCount() <= 2);
   await sample("payslip-part-time", bytes);
 });
+test("bani payslips preserve exact inputs, remaining cash and tax rounding in both languages", async () => {
+  const facts = payrollSchema.parse({
+    month: "2026-09",
+    basic: "2162,50",
+    bonus: "0.20",
+    hours: 4,
+    primary: "yes",
+    dependants: 0,
+    young: "no",
+    children: 0,
+    reduced: "no",
+    standard: "on",
+    meals: "800.15",
+    mealsReference: "Tichete-09-2026",
+    advance: "500.25",
+    advanceReference: "OP-09-2026",
+  });
+  const result = calculatePayroll(facts);
+  for (const locale of ["ro", "en"]) {
+    const body = payslipBody(facts, result, locale);
+    const formatted = body.replace(/\s/g, " ");
+    assert.ok(formatted.includes(locale === "ro" ? "2.162,50" : "2,162.50"));
+    assert.ok(formatted.includes(locale === "ro" ? "699,45" : "699.45"));
+    assert.ok(formatted.includes(locale === "ro" ? "1.260,85" : "1,260.85"));
+    assert.ok(formatted.includes(locale === "ro" ? "1.261,00" : "1,261.00"));
+    assert.match(body, /RO-2026-monthly-v3/);
+    const bytes = await generateEmployeePdf({
+      ...input,
+      locale,
+      template: "payslip",
+      title:
+        locale === "ro" ? "Fluturaș de salariu - 2026-09" : "Payslip - 2026-09",
+      body,
+    });
+    const pdf = await PDFDocument.load(bytes);
+    assert.ok(pdf.getPageCount() <= 2);
+    await sample(`payslip-bani-${locale}`, bytes);
+  }
+});
 test("long Romanian letter wraps long words and paginates", async () => {
   const paragraph =
     "Stimată colegă, confirmăm actualizarea datelor de lucru și a documentelor organizației. Responsabilitățile, programul și informațiile de contact se verifică împreună cu echipa de resurse umane. Îți mulțumim pentru colaborare.";

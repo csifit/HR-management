@@ -91,8 +91,8 @@ export function PayrollForm({
               <input
                 name={k}
                 type="number"
-                step="1"
-                min={k === "basic" ? 1 : 0}
+                step="0.01"
+                min={k === "basic" ? 0.01 : 0}
                 max="1000000"
                 required
                 defaultValue={state.values?.[k] ?? (k === "basic" ? basic : 0)}

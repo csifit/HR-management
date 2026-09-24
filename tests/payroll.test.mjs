@@ -94,13 +94,171 @@ test("unknown tax periods, unsupported declarations and inconsistent deductions 
     { month: "2027-01" },
     { month: "2026-13" },
     { basic: 4050 },
-    { basic: 4325.5 },
+    { basic: 4325.501 },
     { standard: "" },
     { dependants: 5 },
     { primary: "no", children: 1 },
     { basic: 1000000, bonus: 1 },
   ])
     assert.throws(() => calculatePayroll({ ...base, ...patch }));
+});
+test("the exact four-hour minimum keeps bani through taxes, employer costs and advances", () => {
+  const p = calculatePayroll({
+    ...base,
+    basic: "2162,50",
+    hours: 4,
+    advance: "500.25",
+    advanceReference: "Bank-09",
+  });
+  assert.equal(p.rules, "RO-2026-monthly-v3");
+  assert.equal(p.cashGross, 2162.5);
+  assert.equal(p.cas, 541);
+  assert.equal(p.cass, 216);
+  assert.equal(p.personalDeduction, 865);
+  assert.equal(p.taxBaseBeforeRounding, 540.5);
+  assert.equal(p.taxBase, 540);
+  assert.equal(p.incomeTax, 54);
+  assert.equal(p.net, 1351.5);
+  assert.equal(p.payable, 851.25);
+  assert.equal(p.employerCas, 490);
+  assert.equal(p.employerCass, 197);
+  assert.equal(p.cam, 49);
+  assert.equal(p.employerCost, 2898.5);
+  assert.throws(() => calculatePayroll({ ...base, basic: 2162.49, hours: 4 }));
+  assert.equal(
+    calculatePayroll({ ...base, basic: 2162.51, hours: 4 }).taxBase,
+    541,
+  );
+});
+test("fractional bonuses and vouchers add exactly and advances subtract only from cash", () => {
+  const facts = {
+    ...base,
+    basic: 10000.1,
+    bonus: "0,20",
+    meals: "800.15",
+    mealsReference: "Issued-09",
+  };
+  const p = calculatePayroll({
+    ...facts,
+    advance: "500,25",
+    advanceReference: "Bank-09",
+  });
+  assert.equal(p.cashGross, 10000.3);
+  assert.equal(p.gross, 10800.45);
+  assert.equal(p.cas, 2500);
+  assert.equal(p.cass, 1080);
+  assert.equal(p.taxBaseBeforeRounding, 7220.45);
+  assert.equal(p.taxBase, 7220);
+  assert.equal(p.incomeTax, 722);
+  assert.equal(p.net, 5698.3);
+  assert.equal(p.payable, 5198.05);
+  assert.equal(p.employerCost, 11025.45);
+  assert.equal(
+    calculatePayroll({ ...facts, advance: 5698.3, advanceReference: "Bank-09" })
+      .payable,
+    0,
+  );
+  assert.throws(() =>
+    calculatePayroll({
+      ...facts,
+      advance: 5698.31,
+      advanceReference: "Bank-09",
+    }),
+  );
+});
+test("taxable base rounds before tax, with exact half down and the next ban up", () => {
+  const half = calculatePayroll({ ...base, basic: 10008.5 });
+  assert.equal(half.taxBaseBeforeRounding, 6505.5);
+  assert.equal(half.taxBase, 6505);
+  assert.equal(half.incomeTax, 650);
+  assert.equal(half.net, 5855.5);
+  const above = calculatePayroll({ ...base, basic: 10008.51 });
+  assert.equal(above.taxBase, 6506);
+  assert.equal(above.incomeTax, 651);
+  assert.equal(above.net, 5854.51);
+});
+test("contributions round half up at precise bani boundaries", () => {
+  assert.equal(calculatePayroll({ ...base, basic: 10001.99 }).cas, 2500);
+  assert.equal(calculatePayroll({ ...base, basic: 10002 }).cas, 2501);
+  assert.equal(calculatePayroll({ ...base, basic: 10004.99 }).cass, 1000);
+  assert.equal(calculatePayroll({ ...base, basic: 10005 }).cass, 1001);
+  assert.equal(calculatePayroll({ ...base, basic: 10019.99 }).cam, 225);
+  assert.equal(calculatePayroll({ ...base, basic: 10020 }).cam, 225);
+  assert.equal(calculatePayroll({ ...base, basic: 10199.99 }).cam, 229);
+  assert.equal(calculatePayroll({ ...base, basic: 10200 }).cam, 230);
+});
+test("fractional earnings preserve exact allowance caps and personal-deduction thresholds", () => {
+  assert.equal(
+    calculatePayroll({ ...base, basic: 4325, bonus: 275 }).relief,
+    200,
+  );
+  assert.equal(
+    calculatePayroll({ ...base, basic: 4325, bonus: 275.01 }).relief,
+    0,
+  );
+  assert.equal(calculatePayroll({ ...base, basic: 4325.01 }).relief, 0);
+  assert.equal(
+    calculatePayroll({ ...base, month: "2026-06", basic: 4050, bonus: 250 })
+      .relief,
+    300,
+  );
+  assert.equal(
+    calculatePayroll({ ...base, month: "2026-06", basic: 4050, bonus: 250.01 })
+      .relief,
+    0,
+  );
+  assert.equal(
+    calculatePayroll({ ...base, basic: 4375 }).personalDeduction,
+    843,
+  );
+  assert.equal(
+    calculatePayroll({ ...base, basic: 4375.01 }).personalDeduction,
+    822,
+  );
+  assert.equal(
+    calculatePayroll({ ...base, basic: 6325, dependants: 4 }).personalDeduction,
+    1081,
+  );
+  assert.equal(
+    calculatePayroll({ ...base, basic: 6325.01, dependants: 4 })
+      .personalDeduction,
+    0,
+  );
+});
+test("money validation rejects malformed and overprecision values without rounding the input", () => {
+  for (const field of ["basic", "bonus", "meals", "advance"]) {
+    for (const invalid of [
+      "",
+      " ",
+      "1e4",
+      "10,000.50",
+      "1.001",
+      4325.501,
+      -0.01,
+      NaN,
+      Infinity,
+      null,
+      true,
+      1000000.01,
+    ]) {
+      assert.throws(
+        () =>
+          calculatePayroll({
+            ...base,
+            mealsReference: "Issued-09",
+            advanceReference: "Bank-09",
+            [field]: invalid,
+          }),
+        `${field}: ${String(invalid)}`,
+      );
+    }
+  }
+  assert.doesNotThrow(() => calculatePayroll({ ...base, basic: " 10000.10 " }));
+  assert.doesNotThrow(() => calculatePayroll({ ...base, basic: 1000000 }));
+  assert.throws(() =>
+    calculatePayroll({ ...base, basic: 1000000, bonus: 0.01 }),
+  );
+  assert.throws(() => calculatePayroll({ ...base, hours: 4.001 }));
 });
 test("mail configuration accepts only TLS SMTP ports and valid sender addresses", () => {
   const config = {

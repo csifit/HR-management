@@ -1,6 +1,32 @@
 # Safe checkpoint — 24 September 2026
 
-## Current state — recurring work schedules
+## Current state — payroll amounts with bani
+
+**This section supersedes the older resume instructions below.** The user selected **Payroll: amounts with bani** after recurring work schedules. Started from clean commit **`8670636` (`work schedure and attendance`)**. This implementation is local and uncommitted.
+
+### Implementation
+
+- Rule version **`RO-2026-monthly-v3`** accepts basic gross salary, taxable bonuses, issued meal vouchers and already-paid advances with up to two decimals. A four-hour contract at **RON 2,162.50** is supported. Money inputs accept a point or comma without thousands separators; invalid or overprecision amounts are rejected without rounding the input.
+- Calculations use integer bani, including earnings, minimum checks, allowance caps, deductions and advance subtraction. Contributions round at their fiscal step. The income-tax base is rounded to whole lei before calculating tax; preview/PDF show the pre-rounding amount alongside the rounded base when relevant. Existing half-down Title IV and half-up contribution conventions are preserved. Rule details, primary references and independent-validation limitations are in `docs/payroll-rules.md`.
+- RO/EN form fields accept 0.01 increments, and payslips retain fractional inputs, net pay and remaining cash. Public product copy, architecture and roadmap reflect the expanded scope. Stored older PDFs retain their original versions/figures; generating another PDF creates a new snapshot.
+- Scope remains **full months in 2026, normal conditions and Monday–Friday recurring schedules**. Contract matching, HR permissions, benefits review and recorded-leave/absence exclusions remain enforced. No partial-month/leave calculations, other benefits/exemptions, corrections ledger, D112 or bank execution added.
+
+### Verification and release boundaries
+
+- **20/20 focused payroll/PDF tests passed**, including existing whole-leu examples, exact part-time minimum, fractional vouchers/bonuses/advances, overprecision rejection, gross limits, caps and one-ban rounding boundaries. The synthetic RO/EN fractional payslips were rendered with Poppler and visually checked; both fit cleanly on one A4 page. Temporary QA files were removed. No full database-suite rerun was needed for this calculation/UI change.
+- **Production build (including TypeScript), full ESLint and `git diff --check` passed.** Initial build/lint session results became unavailable after a conversation interruption, so both checks were rerun to confirmed success. Prettier's initial sandbox cache restriction was resolved by an approved retry.
+- **No new migration is required.** Existing migration 013 is still a prerequisite for the payroll schedule check; its remote status was not rechecked this turn. Previous CLI 403 is not proof of logout; do not repeatedly prompt for login or blindly repair/reapply migrations.
+- No server was started/stopped, production data changed, email sent, commit/push or deployment performed. **Never run `npm run dev`, start another server or stop the user's server.** The user manages VS Code and manual screens.
+
+### Next checks
+
+1. User's signed-in HR check: open Payroll for an active RON contract covering the entire month; confirm fractional contract salary/hours load correctly, calculate a supported case, save the private PDF, and compare RO/EN preview/PDF. Use a test employee or the organisation's approved review process.
+2. Compare representative results with the payroll accountant/SAGA before payment reliance. Include RON 2,162.50 for four hours, fractional vouchers/advances, exact-half tax/contribution rounding and fractional deduction-band boundaries. The implementation uses exact gross amounts for current deduction bands/caps; this interpretation is documented, not independently accountant-approved.
+3. After manual review, the user can commit/deploy. Broader next work remains partial-month/leave payroll, privacy operational workflows, REGES submission integration and Stripe collections reconciled to official SAGA invoices. No choice of the next feature has yet been made.
+
+---
+
+## Earlier state — recurring work schedules
 
 **This section supersedes the older resume instructions below.** The user explicitly selected recurring organisation/employee work schedules as the next feature. Started from clean commit **`a9f03ad` (`employeee page`)**, which contains the employee-screen changes. This implementation is local and uncommitted.
 

@@ -142,7 +142,7 @@ export default function HrRomaniaPage() {
           pentru cazurile standard acceptate din 2026 și generează fluturași
           PDF. Sunt incluse luni complete cu timp parțial, diferențele de
           contribuții suportate de angajator, tichetele de masă declarate și
-          avansurile deja plătite, pentru sume în lei întregi. Lunile parțiale,
+          avansurile deja plătite, pentru sume în lei și bani. Lunile parțiale,
           concediile, alte beneficii și scutirile de impozit necesită tratare
           separată. Rezultatele trebuie verificate înaintea plății; platforma nu
           execută plăți bancare și nu depune D112.
