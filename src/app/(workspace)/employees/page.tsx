@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Plus, Search } from "lucide-react";
 import { requireOrganisation } from "@/lib/auth";
 import { getLocale } from "@/lib/locale";
@@ -21,6 +22,7 @@ export default async function EmployeesPage({
 }) {
   const filters = await searchParams;
   const { supabase, organisation, membership } = await requireOrganisation();
+  if (membership.role === "employee") redirect("/dashboard");
   const locale = await getLocale();
   const d = dictionary(locale);
   const term = searchTerm(filters.q);

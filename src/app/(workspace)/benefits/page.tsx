@@ -3,6 +3,7 @@ import { requireOrganisation } from "@/lib/auth";
 import { getLocale } from "@/lib/locale";
 import { canManage } from "@/lib/types";
 import { benefitDictionary } from "@/lib/benefit-i18n";
+import { employeeDictionary } from "@/lib/employee-i18n";
 import { benefitCatalogue } from "@/lib/benefit-data";
 import { timeEmployees } from "@/lib/time-data";
 import { singleParam, monthParam } from "@/lib/time";
@@ -19,6 +20,8 @@ export default async function BenefitsPage({
   const { supabase, organisation, membership } = await requireOrganisation();
   const locale = await getLocale();
   const d = benefitDictionary(locale);
+  const ed = employeeDictionary(locale);
+  const self = membership.role === "employee";
   const q = await searchParams;
   const hr = canManage(membership.role);
   const writable = hr && organisation.status === "active";
@@ -26,7 +29,11 @@ export default async function BenefitsPage({
   const month = monthParam(singleParam(q.month));
   const [{ employee, options, hasMore }, { benefits, providers }] =
     await Promise.all([
-      timeEmployees(singleParam(q.employee), singleParam(q.q), !hr),
+      timeEmployees(
+        hr ? singleParam(q.employee) : "",
+        hr ? singleParam(q.q) : "",
+        !hr,
+      ),
       benefitCatalogue(),
     ]);
   // Restrict before pagination so a draft cannot produce empty history pages.
@@ -82,7 +89,10 @@ export default async function BenefitsPage({
     `/benefits?${new URLSearchParams({ employee: employee?.id ?? "", month, page: String(page), historyPage: String(historyPage), ...patch })}`;
   return (
     <>
-      <PageHeader title={d.title} description={d.intro}>
+      <PageHeader
+        title={self ? ed.benefits : d.title}
+        description={self ? ed.benefitsIntro : d.intro}
+      >
         {hr && (
           <div className="time-actions">
             <Link className="button secondary" href="/benefits/settings">
@@ -106,12 +116,14 @@ export default async function BenefitsPage({
             />
           </label>
         )}
-        <EmployeeFilter
-          employees={options}
-          selected={employee?.id}
-          locale={locale}
-          empty={false}
-        />
+        {hr && (
+          <EmployeeFilter
+            employees={options}
+            selected={employee?.id}
+            locale={locale}
+            empty={false}
+          />
+        )}
         <label className="field time-field">
           <span>{d.month}</span>
           <input
@@ -132,7 +144,9 @@ export default async function BenefitsPage({
             <h2>
               {employee.first_name} {employee.last_name}
             </h2>
-            <p className="time-help">{d.enrolmentHelp}</p>
+            <p className="time-help">
+              {hr ? d.enrolmentHelp : ed.benefitsHelp}
+            </p>
             {enrolments.data.map((e) => {
               const b = benefits.find((b) => b.id === e.benefit_id);
               return (

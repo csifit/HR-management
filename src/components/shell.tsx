@@ -63,7 +63,9 @@ export function AppShell({
   const [mobileOpen, setMobileOpen] = useState(false);
   const nav = [
     { href: "/dashboard", label: d.overview, icon: LayoutDashboard },
-    { href: "/employees", label: d.employees, icon: Users },
+    ...(membership.role !== "employee"
+      ? [{ href: "/employees", label: d.employees, icon: Users }]
+      : []),
     ...(membership.role !== "manager"
       ? [{ href: "/contracts", label: d.contracts, icon: Files }]
       : []),
@@ -171,19 +173,17 @@ export function AppShell({
               {label}
             </Link>
           ))}
-          <span className="nav-section-label next-section">{d.comingNext}</span>
-          {[{ label: d.integrations, icon: Plug }].map(
-            ({ label, icon: Icon }) => (
-              <span
-                key={label}
-                className="nav-item nav-planned"
-                aria-disabled="true"
-              >
-                <Icon size={19} />
-                {label}
+          {membership.role !== "employee" && (
+            <>
+              <span className="nav-section-label next-section">
+                {d.comingNext}
+              </span>
+              <span className="nav-item nav-planned" aria-disabled="true">
+                <Plug size={19} />
+                {d.integrations}
                 <span className="planned-dash">—</span>
               </span>
-            ),
+            </>
           )}
         </nav>
         <div className="sidebar-bottom">

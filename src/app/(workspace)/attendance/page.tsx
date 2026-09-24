@@ -4,10 +4,12 @@ import { getLocale } from "@/lib/locale";
 import { canManage } from "@/lib/types";
 import { dateLabel } from "@/lib/i18n";
 import { timeDictionary } from "@/lib/time-i18n";
+import { employeeDictionary } from "@/lib/employee-i18n";
 import { timeEmployees } from "@/lib/time-data";
 import { singleParam, monthParam, attendanceTotals } from "@/lib/time";
 import { PageHeader } from "@/components/ui";
 import { EmployeeFilter } from "@/components/time-ui";
+import { AttendanceCalendar } from "@/components/attendance-calendar";
 export default async function AttendancePage({
   searchParams,
 }: {
@@ -17,12 +19,14 @@ export default async function AttendancePage({
     await requireOrganisation();
   const locale = await getLocale();
   const d = timeDictionary(locale);
+  const ed = employeeDictionary(locale);
+  const self = membership.role === "employee";
   const q = await searchParams;
   const month = monthParam(singleParam(q.month));
   const { options, employee, hasMore } = await timeEmployees(
-    singleParam(q.employee),
-    singleParam(q.q),
-    membership.role === "employee",
+    self ? "" : singleParam(q.employee),
+    self ? "" : singleParam(q.q),
+    self,
   );
   const result = employee
     ? await supabase.rpc("attendance_month", {
@@ -40,9 +44,12 @@ export default async function AttendancePage({
       (membership.role === "manager" && employee?.manager_user_id === user.id));
   return (
     <>
-      <PageHeader title={d.attendance} description={d.attendanceIntro} />
+      <PageHeader
+        title={self ? ed.attendance : d.attendance}
+        description={self ? ed.attendanceIntro : d.attendanceIntro}
+      />
       <form className="time-filters" action="/attendance">
-        {membership.role !== "employee" && (
+        {!self && (
           <label className="field time-field">
             <span>{d.search}</span>
             <input
@@ -53,12 +60,14 @@ export default async function AttendancePage({
             />
           </label>
         )}
-        <EmployeeFilter
-          employees={options}
-          selected={employee?.id}
-          locale={locale}
-          empty={false}
-        />
+        {!self && (
+          <EmployeeFilter
+            employees={options}
+            selected={employee?.id}
+            locale={locale}
+            empty={false}
+          />
+        )}
         <label className="field time-field">
           <span>{d.month}</span>
           <input
@@ -72,13 +81,13 @@ export default async function AttendancePage({
         </label>
         <button className="button secondary">{d.filter}</button>
       </form>
-      {q.saved === "1" && (
+      {!self && q.saved === "1" && (
         <p className="notice success" role="status">
           {d.saved}
         </p>
       )}
       {hasMore && <p className="time-help">{d.searchHint}</p>}
-      <p className="notice">{d.attendanceHelp}</p>
+      <p className="notice">{self ? ed.attendanceHelp : d.attendanceHelp}</p>
       {employee ? (
         <>
           <div className="attendance-totals">
@@ -100,58 +109,69 @@ export default async function AttendancePage({
               </div>
             ))}
           </div>
-          <section className="card table-card">
-            <div className="card-heading">
-              <h2>
-                {employee.first_name} {employee.last_name} · {month}
-              </h2>
-            </div>
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>{d.day}</th>
-                    <th>{d.planned}</th>
-                    <th>{d.worked}</th>
-                    <th>{d.category}</th>
-                    <th>{d.actions}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.day}>
-                      <td>{dateLabel(row.day, locale)}</td>
-                      <td>{row.planned_hours}</td>
-                      <td>{row.worked_hours ?? "—"}</td>
-                      <td>
-                        {row.day < employee.start_date
-                          ? d.beforeStart
-                          : d[row.category]}
-                        {row.leave_request_id && (
-                          <small className="time-subline">{d.fromLeave}</small>
-                        )}
-                      </td>
-                      <td>
-                        {row.leave_request_id ? (
-                          <Link
-                            href={`/leave?employee=${employee.id}&month=${month}&day=${row.day}`}
-                          >
-                            {d.linkedLeave}
-                          </Link>
-                        ) : writable && row.day >= employee.start_date ? (
-                          <Link
-                            href={`/attendance/edit?employee=${employee.id}&day=${row.day}`}
-                          >
-                            {d.edit}
-                          </Link>
-                        ) : null}
-                      </td>
+          {self ? (
+            <AttendanceCalendar
+              rows={rows}
+              month={month}
+              startDate={employee.start_date}
+              locale={locale}
+            />
+          ) : (
+            <section className="card table-card">
+              <div className="card-heading">
+                <h2>
+                  {employee.first_name} {employee.last_name} · {month}
+                </h2>
+              </div>
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{d.day}</th>
+                      <th>{d.planned}</th>
+                      <th>{d.worked}</th>
+                      <th>{d.category}</th>
+                      <th>{d.actions}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+                  </thead>
+                  <tbody>
+                    {rows.map((row) => (
+                      <tr key={row.day}>
+                        <td>{dateLabel(row.day, locale)}</td>
+                        <td>{row.planned_hours}</td>
+                        <td>{row.worked_hours ?? "—"}</td>
+                        <td>
+                          {row.day < employee.start_date
+                            ? d.beforeStart
+                            : d[row.category]}
+                          {row.leave_request_id && (
+                            <small className="time-subline">
+                              {d.fromLeave}
+                            </small>
+                          )}
+                        </td>
+                        <td>
+                          {row.leave_request_id ? (
+                            <Link
+                              href={`/leave?employee=${employee.id}&month=${month}&day=${row.day}`}
+                            >
+                              {d.linkedLeave}
+                            </Link>
+                          ) : writable && row.day >= employee.start_date ? (
+                            <Link
+                              href={`/attendance/edit?employee=${employee.id}&day=${row.day}`}
+                            >
+                              {d.edit}
+                            </Link>
+                          ) : null}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
         </>
       ) : (
         <div className="card time-padding">

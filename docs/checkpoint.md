@@ -1,6 +1,30 @@
-# Safe checkpoint — 23 September 2026
+# Safe checkpoint — 24 September 2026
 
-## Current state — employee invitations, compact onboarding, attendance automation and contract review
+## Current state — employee workspace views
+
+**This section supersedes the older resume instructions below.** Started from the user's clean commit **`587cb28` (`employee onboerding a minor changes`)**, which contains the earlier onboarding/attendance work. The latest request is to simplify the employee sidebar/dashboard and show only personal contracts, leave, attendance and benefits.
+
+### Changes
+
+- Employee sidebar hides Employees and planned Integrations. Direct employee access to `/employees` returns to the dashboard; their own profile/contract detail remains available with a suitable back link.
+- Employee dashboard loads only their pending leave count and **My department** (department, job title, workplace). It skips organisational metrics, recently added employees, department counts and audit queries. “What's next for your workspace” is removed for every role.
+- Contracts explicitly filter to the signed-in employee within the selected organisation. The employee column and empty-state “+ Employees” button are hidden; own contract details remain read-only.
+- Leave shows only personal requests and balances, with no employee selector or approval controls. Employees can request leave and cancel their own pending requests. Unlinked accounts receive an HR-contact notice and cannot submit a request from this page.
+- Employee attendance is a Monday-first monthly calendar with planned/worked hours, automatic attendance labels and approved leave. No edit controls or editable day links. HR/assigned managers retain their existing table and correction flow. The calendar scrolls within its panel on narrow screens.
+- Benefits show personal enrolments and approved monthly history, with no editing or management actions. Personal views ignore employee/search URL filters and derive identity from the signed-in account. Existing database permissions remain the enforcement boundary.
+- New personal-view copy is available in Romanian and English. No schema or payroll/attendance calculation changes.
+
+### Verification and release boundaries
+
+- **35/35 existing permission/workflow tests passed** across tenant isolation, leave/attendance and benefits, including employee-only reads, forbidden writes, approval controls and tenant boundaries. Tests use the local PGlite fixtures, not production HR data. The initial sandbox worker spawn failed with EPERM; the approved retry passed.
+- **Full ESLint and production build passed**, including TypeScript and route generation. `git diff --check` passed (only normal LF/CRLF notices).
+- Manual signed-in screen checks remain for the user: employee linked/unlinked accounts, RO/EN, personal contracts/leave/benefits, calendar month navigation on desktop/mobile, and an HR/manager regression check.
+- Changes are local and uncommitted. No push, deployment, database mutation or email send. **No new migration is required for this UI change**; the earlier frontend still depends on migrations 011–012, whose live status was not independently checked.
+- **Do not run `npm run dev`, start a server or stop the user's server.** The user manages this in VS Code. No server was started/stopped during this work.
+
+---
+
+## Earlier state — employee invitations, compact onboarding, attendance automation and contract review
 
 **This section supersedes the older resume instructions below.** After the payroll/privacy work, the user asked to continue with employee invitations, a compact onboarding checklist, discreet public pricing, contract-based attendance and HR review before REGES. They explicitly chose **“Automatically count elapsed working days as worked”**, superseding the older recorded-only attendance/benefit rule.
 

@@ -4,7 +4,8 @@ import { Files, ArrowUpRight } from "lucide-react";
 import { requireOrganisation } from "@/lib/auth";
 import { getLocale } from "@/lib/locale";
 import { dictionary, dateLabel } from "@/lib/i18n";
-import { pageNumber } from "@/lib/data";
+import { getOwnEmployee, pageNumber } from "@/lib/data";
+import { employeeDictionary } from "@/lib/employee-i18n";
 import type { ContractStatus } from "@/lib/types";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/ui";
 export default async function ContractsPage({
@@ -16,12 +17,20 @@ export default async function ContractsPage({
   if (membership.role === "manager") redirect("/employees");
   const locale = await getLocale();
   const d = dictionary(locale);
+  const ed = employeeDictionary(locale);
+  const self = membership.role === "employee";
+  const ownEmployee = self ? await getOwnEmployee() : null;
   const filters = await searchParams;
   const page = pageNumber(filters.page);
   let query = supabase
     .from("employment_contracts")
     .select("*", { count: "exact" })
     .eq("organisation_id", organisation.id);
+  if (self)
+    query = query.eq(
+      "employee_id",
+      ownEmployee?.id ?? "00000000-0000-4000-8000-000000000000",
+    );
   if (
     filters.status &&
     ["draft", "active", "suspended", "terminated"].includes(filters.status)
@@ -47,23 +56,27 @@ export default async function ContractsPage({
     .order("id")
     .range((page - 1) * 20, page * 20 - 1);
   if (error) throw new Error("Contracts could not be loaded.");
-  const employees = contracts.length
-    ? await supabase
-        .from("employees")
-        .select("id,first_name,last_name")
-        .eq("organisation_id", organisation.id)
-        .in(
-          "id",
-          contracts.map((c) => c.employee_id),
-        )
-    : { data: [], error: null };
+  const employees =
+    !self && contracts.length
+      ? await supabase
+          .from("employees")
+          .select("id,first_name,last_name")
+          .eq("organisation_id", organisation.id)
+          .in(
+            "id",
+            contracts.map((c) => c.employee_id),
+          )
+      : { data: [], error: null };
   if (employees.error) throw new Error("Employees could not be loaded.");
   const totalPages = Math.max(1, Math.ceil((count ?? 0) / 20));
   const href = (target: number) =>
     `/contracts?${new URLSearchParams({ ...(filters.status ? { status: filters.status } : {}), ...(filters.ending ? { ending: filters.ending } : {}), page: String(target) })}`;
   return (
     <>
-      <PageHeader title={d.contracts} description={d.contractIntro} />
+      <PageHeader
+        title={self ? ed.contracts : d.contracts}
+        description={self ? ed.contractIntro : d.contractIntro}
+      />
       <section className="card table-card">
         <div className="table-toolbar">
           <form className="filter-form" action="/contracts">
@@ -99,7 +112,7 @@ export default async function ContractsPage({
               <thead>
                 <tr>
                   <th>{d.contractNumber}</th>
-                  <th>{d.employee}</th>
+                  {!self && <th>{d.employee}</th>}
                   <th>{d.contractType}</th>
                   <th>{d.startDate}</th>
                   <th>{d.endDate}</th>
@@ -124,9 +137,11 @@ export default async function ContractsPage({
                           {c.contract_number}
                         </Link>
                       </td>
-                      <td>
-                        {e?.first_name} {e?.last_name}
-                      </td>
+                      {!self && (
+                        <td>
+                          {e?.first_name} {e?.last_name}
+                        </td>
+                      )}
                       <td>{d[c.contract_type]}</td>
                       <td>{dateLabel(c.start_date, locale)}</td>
                       <td>{dateLabel(c.end_date, locale)}</td>
@@ -151,10 +166,16 @@ export default async function ContractsPage({
         ) : (
           <EmptyState
             title={d.noContracts}
-            description={d.noContractsBody}
+            description={
+              self
+                ? ownEmployee
+                  ? ed.noContracts
+                  : ed.noAccount
+                : d.noContractsBody
+            }
             icon={Files}
-            href="/employees"
-            label={d.employees}
+            href={self ? undefined : "/employees"}
+            label={self ? undefined : d.employees}
           />
         )}
         <div className="table-footer">

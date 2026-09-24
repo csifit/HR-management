@@ -84,9 +84,22 @@ export default async function EmployeePage({
   if (reviews.error) throw new Error("Contract reviews could not be loaded.");
   return (
     <>
-      <Link className="back-link" href="/employees">
+      <Link
+        className="back-link"
+        href={
+          membership.role === "employee"
+            ? tab === "contract"
+              ? "/contracts"
+              : "/dashboard"
+            : "/employees"
+        }
+      >
         <ArrowLeft size={16} />
-        {d.employees}
+        {membership.role === "employee"
+          ? tab === "contract"
+            ? d.contracts
+            : d.overview
+          : d.employees}
       </Link>
       <section className="card profile-header">
         <div className="profile-summary">

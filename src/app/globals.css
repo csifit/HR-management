@@ -2205,6 +2205,53 @@ td,
   color: var(--muted);
   font-size: 0.8rem;
 }
+.attendance-calendar-card {
+  overflow: hidden;
+}
+.attendance-calendar {
+  table-layout: fixed;
+  min-width: 840px;
+  width: 100%;
+}
+.attendance-calendar th {
+  text-align: center;
+  white-space: normal;
+}
+.attendance-calendar td {
+  height: 160px;
+  padding: 12px;
+  vertical-align: top;
+  border-right: 1px solid var(--line);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.attendance-calendar td:last-child {
+  border-right: 0;
+}
+.attendance-calendar time {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 1rem;
+  font-weight: 650;
+}
+.attendance-calendar span,
+.attendance-calendar small {
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 6px;
+}
+.attendance-calendar small {
+  color: var(--muted);
+}
+.attendance-calendar-category {
+  font-weight: 600;
+}
+.attendance-calendar-leave {
+  background: var(--brand-soft);
+}
+.attendance-calendar-empty {
+  background: var(--surface-subtle, #f8fafc);
+}
 @media (max-width: 760px) {
   .time-settings-grid {
     grid-template-columns: 1fr;

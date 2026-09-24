@@ -5,6 +5,7 @@ import { getLocale } from "@/lib/locale";
 import { canManage } from "@/lib/types";
 import { dateLabel } from "@/lib/i18n";
 import { timeDictionary } from "@/lib/time-i18n";
+import { employeeDictionary } from "@/lib/employee-i18n";
 import { timeEmployees } from "@/lib/time-data";
 import { singleParam, monthParam, monthDays, todayInRomania } from "@/lib/time";
 import { timeDate } from "@/lib/time-validation";
@@ -22,6 +23,8 @@ export default async function LeavePage({
     await requireOrganisation();
   const locale = await getLocale();
   const d = timeDictionary(locale);
+  const ed = employeeDictionary(locale);
+  const self = membership.role === "employee";
   const q = await searchParams;
   const hr = canManage(membership.role);
   const writable = organisation.status === "active";
@@ -40,16 +43,20 @@ export default async function LeavePage({
   const page = pageNumber(singleParam(q.page));
   const search = singleParam(q.q);
   const { options, employee, hasMore } = await timeEmployees(
-    singleParam(q.employee),
-    search,
-    membership.role === "employee",
+    self ? "" : singleParam(q.employee),
+    self ? "" : search,
+    self,
   );
   const year = Number((month || todayInRomania()).slice(0, 4));
   let query = supabase
     .from("leave_requests")
     .select("*", { count: "exact" })
     .eq("organisation_id", organisation.id);
-  if (employee) query = query.eq("employee_id", employee.id);
+  if (employee || self)
+    query = query.eq(
+      "employee_id",
+      employee?.id ?? "00000000-0000-4000-8000-000000000000",
+    );
   if (status) query = query.eq("status", status);
   if (month)
     query = query
@@ -72,7 +79,7 @@ export default async function LeavePage({
           p_year: year,
         })
       : Promise.resolve({ data: [], error: null }),
-    view === "calendar"
+    view === "calendar" && (!self || employee)
       ? supabase.rpc("leave_calendar", {
           p_org: organisation.id,
           p_month: `${month}-01`,
@@ -103,7 +110,10 @@ export default async function LeavePage({
   };
   return (
     <>
-      <PageHeader title={d.leave} description={d.leaveIntro}>
+      <PageHeader
+        title={self ? ed.leave : d.leave}
+        description={self ? ed.leaveIntro : d.leaveIntro}
+      >
         <div className="time-actions">
           {hr && (
             <Link className="button secondary" href="/leave/settings">
@@ -111,7 +121,7 @@ export default async function LeavePage({
               {d.settings}
             </Link>
           )}
-          {writable && (
+          {writable && (!self || employee) && (
             <Link
               className="button primary"
               href={`/leave/new${employee && (hr || employee.user_id === user.id) ? `?employee=${employee.id}` : ""}`}
@@ -129,7 +139,7 @@ export default async function LeavePage({
       )}
       <form className="time-filters" action="/leave">
         <input type="hidden" name="view" value={view} />
-        {membership.role !== "employee" && (
+        {!self && (
           <label className="field time-field">
             <span>{d.search}</span>
             <input
@@ -140,11 +150,13 @@ export default async function LeavePage({
             />
           </label>
         )}
-        <EmployeeFilter
-          employees={options}
-          selected={employee?.id}
-          locale={locale}
-        />
+        {!self && (
+          <EmployeeFilter
+            employees={options}
+            selected={employee?.id}
+            locale={locale}
+          />
+        )}
         <label className="field time-field">
           <span>{d.month}</span>
           <input
@@ -171,6 +183,7 @@ export default async function LeavePage({
         <button className="button secondary">{d.filter}</button>
       </form>
       <p className="time-help">{hasMore ? d.searchHint : d.allMonths}</p>
+      {self && !employee && <p className="notice">{ed.noAccount}</p>}
       {employee && (
         <section className="card time-section">
           <div className="card-heading">
@@ -256,7 +269,7 @@ export default async function LeavePage({
             <table>
               <thead>
                 <tr>
-                  <th>{d.employee}</th>
+                  {!self && <th>{d.employee}</th>}
                   <th>{d.type}</th>
                   <th>{d.period}</th>
                   <th>{d.status}</th>
@@ -282,13 +295,15 @@ export default async function LeavePage({
                       (own && r.status === "pending"));
                   return (
                     <tr key={r.id}>
-                      <td>
-                        <Link href={`/employees/${r.employee_id}`}>
-                          {person
-                            ? `${person.first_name} ${person.last_name}`
-                            : "—"}
-                        </Link>
-                      </td>
+                      {!self && (
+                        <td>
+                          <Link href={`/employees/${r.employee_id}`}>
+                            {person
+                              ? `${person.first_name} ${person.last_name}`
+                              : "—"}
+                          </Link>
+                        </td>
+                      )}
                       <td>
                         {types.data.find((t) => t.id === r.leave_type_id)
                           ?.name ?? "—"}
@@ -311,7 +326,7 @@ export default async function LeavePage({
                       <td>
                         {(approve || cancel) && (
                           <details className="time-review">
-                            <summary>{d.decision}</summary>
+                            <summary>{self ? d.cancel : d.decision}</summary>
                             <LeaveDecisionForm
                               key={r.version}
                               request={r}

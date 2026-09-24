@@ -6,7 +6,6 @@ import {
   Files,
   Plus,
   ArrowRight,
-  Sparkles,
   History,
   CalendarDays,
 } from "lucide-react";
@@ -17,12 +16,14 @@ import { canManage } from "@/lib/types";
 import { PageHeader, Metric, EmptyState } from "@/components/ui";
 import { EmployeeTable } from "@/components/employee-table";
 import { timeDictionary } from "@/lib/time-i18n";
-import { benefitDictionary } from "@/lib/benefit-i18n";
+import { EmployeeOverview } from "@/components/employee-overview";
 export default async function DashboardPage() {
   const { supabase, organisation, membership } = await requireOrganisation();
   const locale = await getLocale();
   const d = dictionary(locale);
   const td = timeDictionary(locale);
+  if (membership.role === "employee")
+    return <EmployeeOverview locale={locale} />;
   const manage = canManage(membership.role);
   const writable = manage && organisation.status === "active";
   const [summary, recent, activity, pendingLeave] = await Promise.all([
@@ -208,16 +209,6 @@ export default async function DashboardPage() {
           </div>
         </section>
       )}
-      <div className="roadmap-card">
-        <span className="roadmap-icon">
-          <Sparkles size={22} />
-        </span>
-        <div>
-          <h3>{d.upcomingModules}</h3>
-          <p>{benefitDictionary(locale).upcoming}</p>
-        </div>
-        <span className="roadmap-tag">{d.planned}</span>
-      </div>
     </>
   );
 }

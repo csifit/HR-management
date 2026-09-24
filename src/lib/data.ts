@@ -2,6 +2,17 @@ import "server-only";
 import { notFound } from "next/navigation";
 import { requireOrganisation } from "./auth";
 import { idSchema } from "./validation";
+export async function getOwnEmployee() {
+  const { supabase, organisation, user } = await requireOrganisation();
+  const { data, error } = await supabase
+    .from("employees")
+    .select("id,department,job_title,workplace")
+    .eq("organisation_id", organisation.id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (error) throw new Error("Your employee record could not be loaded.");
+  return data;
+}
 export async function getEmployee(id: string) {
   if (!idSchema.safeParse(id).success) notFound();
   const context = await requireOrganisation();
