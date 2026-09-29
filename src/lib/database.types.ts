@@ -40,6 +40,13 @@ import type {
 import type { RegesConnection } from "./reges";
 import type { EmployeeInvitation } from "./invitation-types";
 import type {
+  PayrollRun,
+  PayrollRunItem,
+  PayrollRunEvent,
+  PayrollRunDocument,
+} from "./payroll-run-types";
+import type { PayrollInput } from "./payroll";
+import type {
   PrivacyRequest,
   PrivacyEvent,
   PrivacyExport,
@@ -55,6 +62,10 @@ type Table<Row> = {
 export type Database = {
   public: {
     Tables: {
+      payroll_runs: Table<PayrollRun>;
+      payroll_run_items: Table<PayrollRunItem>;
+      payroll_run_events: Table<PayrollRunEvent>;
+      payroll_run_documents: Table<PayrollRunDocument>;
       privacy_requests: Table<PrivacyRequest>;
       privacy_request_events: Table<PrivacyEvent>;
       privacy_exports: Table<PrivacyExport>;
@@ -99,6 +110,62 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      create_payroll_run: {
+        Args: {
+          p_org: string;
+          p_month: string;
+          p_previous?: string | null;
+          p_reason?: string;
+        };
+        Returns: string;
+      };
+      save_payroll_item: {
+        Args: {
+          p_org: string;
+          p_run: string;
+          p_version: number;
+          p_employee: string;
+          p_input: PayrollInput;
+          p_benefits_reviewed: boolean;
+        };
+        Returns: string;
+      };
+      remove_payroll_item: {
+        Args: {
+          p_org: string;
+          p_run: string;
+          p_version: number;
+          p_item: string;
+        };
+        Returns: undefined;
+      };
+      approve_payroll_run: {
+        Args: {
+          p_org: string;
+          p_run: string;
+          p_version: number;
+          p_confirm: boolean;
+        };
+        Returns: undefined;
+      };
+      discard_payroll_run: {
+        Args: {
+          p_org: string;
+          p_run: string;
+          p_version: number;
+          p_reason: string;
+        };
+        Returns: undefined;
+      };
+      prepare_payroll_document: {
+        Args: {
+          p_org: string;
+          p_item: string;
+          p_bytes: number;
+          p_locale: string;
+        };
+        Returns: string;
+      };
       create_privacy_request: {
         Args: {
           p_org: string;

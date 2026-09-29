@@ -38,7 +38,13 @@ Implemented locally: owner-managed employer/author identifiers and a clearly dis
 
 The user explicitly requested an in-app payroll calculator. Implemented locally: effective-dated full-month 2026 CAS/CASS/income-tax and deduction calculations, net pay and printable private payslips. Expansions add part-time contribution floors/evidenced exceptions, declared meal vouchers, paid salary advances and two-decimal amounts with integer-bani arithmetic (v3). HR confirms eligibility and issuance; the current contract, hours and salary are checked before generation. See `payroll-rules.md` for precise supported facts, rounding and sources.
 
-Remaining: accountant reference validation (including fractional earnings and rounding boundaries), partial months and leave pay, other benefits, income-tax exemptions, other deductions, corrections/payroll ledger, D112 and accounting exports/adapters. No bank payment execution. Broader payroll coverage must be added as tested, versioned rules, never inferred silently.
+Migration 015 adds selected-employee monthly drafts, database-calculated saved figures, source rechecks, closed-month HR approval, immutable approved snapshots, correction revisions, private linked payslips and history. See `payroll-runs.md`. Runs are limited to 200 explicitly included employees; no automatic whole-company coverage is implied.
+
+Remaining: accountant reference validation (including fractional earnings and rounding boundaries), partial months and leave pay, other benefits, income-tax exemptions, other deductions, D112 and accounting exports/adapters. No bank payment execution. Broader payroll coverage must be added as tested, versioned rules, never inferred silently.
+
+## Proposed SAP connector
+
+The user requested an assessment of a simpler HRConnector interface connected to SAP HR. See `sap-integration-feasibility.md` for the 29 September 2026 analysis. Recommended pilot: one customer using SuccessFactors Employee Central, controlled employee-data import first, then one agreed request workflow. SAP HCM for S/4HANA/ERP needs a separate deployment-specific adapter. No SAP connection or credentials are implemented. A pilot product/version, sandbox, SAP technical contact, field ownership and commercial scope are needed before implementation.
 
 ## Security, privacy, discovery and subscriptions
 

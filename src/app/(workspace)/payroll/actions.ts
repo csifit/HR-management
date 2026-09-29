@@ -1,140 +1,216 @@
 "use server";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
-import {
-  parseDocumentAction,
-  finishDocumentAction,
-} from "@/lib/document-actions";
+import { redirect } from "next/navigation";
+import { requireHR } from "@/lib/auth";
 import { payrollSchema, calculatePayroll } from "@/lib/payroll";
-import { payrollDictionary, payslipBody } from "@/lib/payroll-i18n";
-import { scheduleDictionary } from "@/lib/schedule-i18n";
+import { payrollRunDictionary } from "@/lib/payroll-run-i18n";
 import { getLocale } from "@/lib/locale";
-import { generateEmployeePdf } from "@/lib/document-pdf";
+import { generateApprovedPayrollPdf } from "@/lib/payroll-run-pdf";
 import { brand } from "@/lib/brand";
 import { DOCUMENT_BUCKET } from "@/lib/document-types";
 import type { ActionState } from "@/lib/types";
-const schema = z.intersection(
+
+const versioned = z.object({
+  run_id: z.uuid(),
+  run_version: z.coerce.number().int().positive(),
+});
+const saveSchema = z.intersection(
   payrollSchema,
-  z.object({ employee_id: z.uuid(), benefits_reviewed: z.literal("on") }),
+  versioned.extend({
+    employee_id: z.uuid(),
+    benefits_reviewed: z.literal("on"),
+  }),
 );
-export async function generatePayslip(
-  _s: ActionState,
+const createSchema = z
+  .object({
+    month: z.string().regex(/^2026-(0[1-9]|1[0-2])$/),
+    previous: z.union([z.uuid(), z.literal("")]).default(""),
+    reason: z.string().trim().max(1000).default(""),
+  })
+  .refine((v) => !v.previous || v.reason.length >= 5);
+const formValues = (form: FormData) =>
+  Object.fromEntries(
+    [...form.entries()].filter(
+      ([key, value]) => !key.startsWith("$") && typeof value === "string",
+    ),
+  ) as Record<string, string>;
+
+async function outcome(
+  error: { code?: string } | null,
+  values: Record<string, string>,
+  run?: string,
+): Promise<ActionState> {
+  const d = payrollRunDictionary(await getLocale());
+  if (error) {
+    const messages: Record<string, string> = {
+      P0006: d.stale,
+      P0010: d.sourceChanged,
+      P0011: d.closedMonthOnly,
+      P0012: d.limitReached,
+      D0001: d.locked,
+      "23505": d.duplicate,
+      "22023": d.invalid,
+      "23514": d.invalid,
+    };
+    return { error: messages[error.code ?? ""] ?? d.error, values };
+  }
+  revalidatePath("/payroll");
+  if (run) revalidatePath(`/payroll/runs/${run}`);
+  return { success: d.saved };
+}
+
+export async function createPayrollRun(
+  _state: ActionState,
   form: FormData,
 ): Promise<ActionState> {
-  const p = await parseDocumentAction(schema, form);
-  if (p.error) return p.error;
-  const c = p.context,
-    v = p.data,
+  const c = await requireHR(true),
+    values = formValues(form),
+    parsed = createSchema.safeParse(values);
+  if (!parsed.success) return outcome({ code: "22023" }, values);
+  const v = parsed.data;
+  const { data, error } = await c.supabase.rpc("create_payroll_run", {
+    p_org: c.organisation.id,
+    p_month: `${v.month}-01`,
+    p_previous: v.previous || null,
+    p_reason: v.reason,
+  });
+  if (error || !data) return outcome(error ?? {}, values);
+  revalidatePath("/payroll");
+  redirect(`/payroll/runs/${data}`);
+}
+
+export async function savePayrollEntry(
+  _state: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const c = await requireHR(true),
+    values = formValues(form),
+    parsed = saveSchema.safeParse(values);
+  if (!parsed.success) return outcome({ code: "22023" }, values);
+  const v = parsed.data,
+    input = payrollSchema.parse(v);
+  try {
+    calculatePayroll(input);
+  } catch {
+    return outcome({ code: "22023" }, values);
+  }
+  const { error } = await c.supabase.rpc("save_payroll_item", {
+    p_org: c.organisation.id,
+    p_run: v.run_id,
+    p_version: v.run_version,
+    p_employee: v.employee_id,
+    p_input: input,
+    p_benefits_reviewed: true,
+  });
+  return outcome(error, values, v.run_id);
+}
+
+export async function removePayrollEntry(
+  _state: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const c = await requireHR(true),
+    values = formValues(form),
+    parsed = versioned.extend({ item_id: z.uuid() }).safeParse(values);
+  if (!parsed.success) return outcome({ code: "22023" }, values);
+  const v = parsed.data;
+  const { error } = await c.supabase.rpc("remove_payroll_item", {
+    p_org: c.organisation.id,
+    p_run: v.run_id,
+    p_version: v.run_version,
+    p_item: v.item_id,
+  });
+  return outcome(error, values, v.run_id);
+}
+
+export async function approvePayrollRun(
+  _state: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const c = await requireHR(true),
+    values = formValues(form),
+    parsed = versioned.extend({ confirm: z.literal("on") }).safeParse(values);
+  if (!parsed.success) return outcome({ code: "22023" }, values);
+  const v = parsed.data;
+  const { error } = await c.supabase.rpc("approve_payroll_run", {
+    p_org: c.organisation.id,
+    p_run: v.run_id,
+    p_version: v.run_version,
+    p_confirm: true,
+  });
+  return outcome(error, values, v.run_id);
+}
+
+export async function discardPayrollRun(
+  _state: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const c = await requireHR(true),
+    values = formValues(form),
+    parsed = versioned
+      .extend({ reason: z.string().trim().min(5).max(1000) })
+      .safeParse(values);
+  if (!parsed.success) return outcome({ code: "22023" }, values);
+  const v = parsed.data;
+  const { error } = await c.supabase.rpc("discard_payroll_run", {
+    p_org: c.organisation.id,
+    p_run: v.run_id,
+    p_version: v.run_version,
+    p_reason: v.reason,
+  });
+  return outcome(error, values, v.run_id);
+}
+
+export async function generateApprovedPayslip(
+  _state: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  const c = await requireHR(true),
+    values = formValues(form),
     locale = await getLocale(),
-    d = payrollDictionary(locale),
-    monthStart = `${v.month}-01`,
-    monthEnd = new Date(Date.UTC(2026, Number(v.month.slice(5)), 0))
-      .toISOString()
-      .slice(0, 10);
-  const [employee, contracts, leave, attendance, schedule] = await Promise.all([
+    d = payrollRunDictionary(locale);
+  const parsed = z
+    .object({ run_id: z.uuid(), item_id: z.uuid() })
+    .safeParse(values);
+  if (!parsed.success) return outcome({ code: "22023" }, values);
+  const v = parsed.data;
+  const [run, item] = await Promise.all([
     c.supabase
-      .from("employees")
+      .from("payroll_runs")
       .select("*")
       .eq("organisation_id", c.organisation.id)
-      .eq("id", v.employee_id)
+      .eq("id", v.run_id)
       .single(),
     c.supabase
-      .from("employment_contracts")
+      .from("payroll_run_items")
       .select("*")
       .eq("organisation_id", c.organisation.id)
-      .eq("employee_id", v.employee_id)
-      .lte("start_date", monthEnd)
-      .or(`end_date.is.null,end_date.gte.${monthStart}`),
-    c.supabase
-      .from("leave_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("organisation_id", c.organisation.id)
-      .eq("employee_id", v.employee_id)
-      .eq("status", "approved")
-      .lte("start_date", monthEnd)
-      .gte("end_date", monthStart),
-    c.supabase
-      .from("attendance")
-      .select("id", { count: "exact", head: true })
-      .eq("organisation_id", c.organisation.id)
-      .eq("employee_id", v.employee_id)
-      .gte("day", monthStart)
-      .lte("day", monthEnd)
-      .neq("absence", "none"),
-    c.supabase.rpc("payroll_standard_schedule", {
-      p_org: c.organisation.id,
-      p_employee: v.employee_id,
-      p_month: monthStart,
-    }),
+      .eq("run_id", v.run_id)
+      .eq("id", v.item_id)
+      .single(),
   ]);
-  if (
-    employee.error ||
-    contracts.error ||
-    leave.error ||
-    attendance.error ||
-    schedule.error
-  )
-    return { error: d.mismatch, values: p.values };
-  if (!schedule.data)
-    return { error: scheduleDictionary(locale).payroll, values: p.values };
-  const e = employee.data,
-    contract = contracts.data[0];
-  if (
-    e.status !== "active" ||
-    e.start_date > monthStart ||
-    contracts.data.length !== 1 ||
-    !contract ||
-    contract.status !== "active" ||
-    contract.start_date > monthStart ||
-    (contract.end_date && contract.end_date < monthEnd) ||
-    Number(contract.working_hours) !== v.hours ||
-    Number(contract.gross_salary) !== v.basic ||
-    contract.currency !== "RON" ||
-    (leave.count ?? 0) > 0 ||
-    (attendance.count ?? 0) > 0
-  )
-    return { error: d.mismatch, values: p.values };
+  if (run.error || item.error || run.data.status !== "approved")
+    return outcome({ code: "D0001" }, values);
   let bytes: Uint8Array;
   try {
-    const result = calculatePayroll(v);
-    const body = payslipBody(v, result, locale);
-    bytes = await generateEmployeePdf({
+    bytes = await generateApprovedPayrollPdf(
+      run.data,
+      item.data,
       locale,
-      brandName: brand.name,
-      title: `${d.payslip} - ${v.month}`,
-      template: "payslip",
-      body,
-      company: {
-        name: c.organisation.name,
-        cui: c.organisation.cui,
-        address: c.organisation.registered_address ?? "",
-      },
-      employee: {
-        name: `${e.first_name} ${e.last_name}`,
-        email: e.email,
-        job: e.job_title,
-        department: e.department,
-        workplace: e.workplace,
-        start: e.start_date,
-        status: e.status,
-      },
-      generatedAt: new Date(),
-    });
+      brand.name,
+    );
   } catch {
-    return { error: d.invalid, values: p.values };
+    return { error: d.pdfFailed, values };
   }
-  const prepared = await c.supabase.rpc("prepare_employee_document", {
+  const prepared = await c.supabase.rpc("prepare_payroll_document", {
     p_org: c.organisation.id,
-    p_employee: e.id,
-    p_title: `${d.payslip} - ${v.month}`,
-    p_category: "employment",
-    p_visibility: "hr_only",
-    p_origin: "generated",
-    p_filename: `payslip-${v.month}.pdf`,
+    p_item: v.item_id,
     p_bytes: bytes.length,
+    p_locale: locale,
   });
   if (prepared.error || !prepared.data)
-    return finishDocumentAction(prepared.error ?? {}, p.values);
+    return outcome(prepared.error ?? {}, values);
   const uploaded = await c.supabase.storage
     .from(DOCUMENT_BUCKET)
     .upload(`${c.organisation.id}/${prepared.data}.pdf`, bytes, {
@@ -144,12 +220,17 @@ export async function generatePayslip(
     });
   if (uploaded.error) {
     revalidatePath("/documents");
-    return finishDocumentAction({}, p.values);
+    revalidatePath(`/payroll/runs/${v.run_id}`);
+    return { error: d.pdfFailed, values };
   }
   const completed = await c.supabase.rpc("complete_employee_document", {
     p_org: c.organisation.id,
     p_id: prepared.data,
     p_version: 1,
   });
-  return finishDocumentAction(completed.error, p.values);
+  revalidatePath("/documents");
+  revalidatePath(`/payroll/runs/${v.run_id}`);
+  return completed.error
+    ? { error: d.pdfFailed, values }
+    : { success: d.pdfSaved };
 }

@@ -418,6 +418,28 @@ export function moneyLabel(value: number, locale: Locale) {
 }
 export function actionLabel(action: string, locale: Locale) {
   const labels: Record<string, [string, string]> = {
+    "payroll.created": ["Stat salarial creat", "Payroll run created"],
+    "payroll.item_saved": [
+      "Calcul salarial salvat",
+      "Payroll calculation saved",
+    ],
+    "payroll.item_copied": [
+      "Calcul copiat pentru corecție",
+      "Calculation copied for correction",
+    ],
+    "payroll.item_removed": [
+      "Calcul eliminat din ciornă",
+      "Calculation removed from draft",
+    ],
+    "payroll.approved": ["Stat salarial aprobat", "Payroll run approved"],
+    "payroll.discarded": [
+      "Ciornă salarială abandonată",
+      "Payroll draft discarded",
+    ],
+    "payroll.document_prepared": [
+      "Fluturaș aprobat pregătit",
+      "Approved payslip prepared",
+    ],
     "privacy.created": [
       "Solicitare privind datele înregistrată",
       "Privacy request recorded",

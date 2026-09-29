@@ -1,6 +1,38 @@
-# Safe checkpoint — 24 September 2026
+# Safe checkpoint — 29 September 2026
 
-## Current state — privacy requests and employee review exports
+## Current state — monthly payroll approval and SAP assessment
+
+**This section supersedes the older resume instructions below.** Started from clean, committed **`bc43a9b` (`Data protection → Privacy requests`)**, containing migration 014/privacy work. The user selected **Monthly payroll approval and history**. During implementation they also requested a feasibility assessment of SAP HR integration; that request is analysis, not authorisation for a live SAP connection.
+
+### Implementation
+
+- **Migration 015** adds HR-only selected-employee monthly runs, draft calculations, restricted change events and approved-document links. Public RPCs check tenant/role/MFA/status, expected run version, explicit confirmations and the existing organisation lock. A private SQL mirror of the v3 calculator computes stored results independently; browser totals cannot be supplied. No new tax cases or tax-rule claims are introduced.
+- `/payroll` lists monthly revisions. HR creates a draft, saves selected employee calculations, reviews figures/totals and approves only after the month ends in Romania. Approval rechecks stable contract/employee/calendar/schedule/attendance/benefit sources. Drafts support editing/removal/discard; corrections copy the latest approved revision into a new draft with a reason. Original approved records stay immutable. Limits: one open draft per organisation/month and 200 included employees. The scope is the selected employee set, not implied whole-company payroll.
+- PDFs are generated only from approved saved facts and identify the run/month/revision. They remain HR-only until explicitly published or sent through Documents. Preparation/upload/finalisation are separate; failure can leave a pending file and explicit retry creates a new linked record. Corrections do not recall previously published/emailed PDFs or execute/reverse payments. No production email sent.
+- Manual attendance whose planned/worked hours differ from the contractual working day blocks saving/approval, including zero-hour no-shows with `absence=none`. Such adjustments are outside the current full-month calculator; no automatic salary proration is inferred.
+- Privacy review exports include only the selected employee's payroll records, item-history inputs/results and document identifiers. No whole-run totals, other employees or internal actor identifiers. Run history is HR-only; generic audit metadata contains action/IDs without salaries.
+- `docs/payroll-runs.md` documents scope, approval, corrections, source checks and manual verification. Existing accountant/SAGA reference validation, partial-month/leave cases, other benefits/exemptions, D112, accounting exports and bank execution remain outstanding.
+- **SAP feasibility:** `docs/sap-integration-feasibility.md`, based on official SAP sources reviewed 29 September. Recommended future pilot: SuccessFactors Employee Central employee-data import, then one agreed request workflow. SAP HCM for S/4HANA/ERP requires a deployment-specific adapter. Need pilot product/version, SAP administrator, sandbox, field ownership and commercial/access requirements. No connector, credentials or network request to a customer system implemented. Added to roadmap.
+
+### Verification and release boundaries
+
+- **111/111 full regression tests passed**, including 14 payroll-run database cases and the approved-snapshot PDF test. Coverage includes SQL/JavaScript fractional/band/rounding parity, malformed/forged inputs, tenant/role/MFA/status restrictions, stale versions/sources, locking, immutable corrections, selected scope, 200-entry limit, private document linkage and employee-isolated payroll exports. Tests use PGlite/synthetic fixtures; no production service was exercised. An initial focused-test fixture attempted to set an end date on an indefinite contract; it was corrected to a fixed-term fixture before the passing runs.
+- **Full ESLint, production build including TypeScript, and `git diff --check` passed.** The initial TypeScript check found explicit `.ts` imports in the shared PDF helper; `allowImportingTsExtensions` was enabled with the existing `noEmit` setting so both Next and Node's TypeScript test runner resolve the shared code. No dependency added.
+- Synthetic approved-revision RO/EN payslips were generated, rendered with Poppler and visually checked: both fit cleanly on one A4 page. Temporary QA outputs were removed. Signed-in screens, actual Supabase Storage transfers and remote migration state remain unverified; user manages those checks.
+- **Apply migration 015 after 001–014 before deploying this frontend.** Neither remote history nor migration 014 deployment was verified this turn. Do not blindly repair/reapply migrations or interpret the earlier Supabase 403 as logout. No new environment variables are required.
+- All changes remain local and uncommitted. No commit, push, deployment or production mutation was performed. **Never run `npm run dev`, start another server, or stop the user's server.** User manages VS Code and signed-in/manual checks.
+
+### Next release steps
+
+1. Review/apply migration 015 after checking existing migration history, then deploy through the user's normal process.
+2. Run the synthetic RO/EN checks in `docs/payroll-runs.md`: closed-month draft/edit/approval, stale source/tab, original/corrected revision history, PDF Storage completion and payroll privacy export. Check employee/manager denial and organisation/MFA states. Local tests cannot establish live provider/UI correctness.
+3. Compare representative payroll figures against accountant/SAGA outputs before payment reliance. Choose the next roadmap item after this release; SAP implementation needs pilot discovery first.
+
+---
+
+## Earlier checkpoint — 24 September 2026
+
+## Earlier state — privacy requests and employee review exports
 
 **This section supersedes the older resume instructions below.** The user selected **Employee data exports and privacy requests**. Started from clean commit **`90cbb00` (`payroll 101`)**, which includes the completed bani payroll work. These new changes are local and uncommitted.
 

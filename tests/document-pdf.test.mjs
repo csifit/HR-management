@@ -9,6 +9,7 @@ import {
 } from "../src/lib/document-pdf.ts";
 import { calculatePayroll, payrollSchema } from "../src/lib/payroll.ts";
 import { payslipBody } from "../src/lib/payroll-i18n.ts";
+import { generateApprovedPayrollPdf } from "../src/lib/payroll-run-pdf.ts";
 const input = {
   locale: "ro",
   brandName: "HRConnector",
@@ -158,6 +159,75 @@ test("long Romanian letter wraps long words and paginates", async () => {
   assert.ok(pdf.getPageCount() >= 2);
   assert.ok(pdf.getPageCount() <= 4);
   await sample("hr-letter", bytes);
+});
+test("approved payroll PDFs retain revision references and reject drafts or mismatched snapshots", async () => {
+  const facts = payrollSchema.parse({
+    month: "2026-08",
+    basic: 2162.5,
+    bonus: 0.2,
+    hours: 4,
+    primary: "yes",
+    dependants: 0,
+    young: "no",
+    children: 0,
+    reduced: "no",
+    standard: "on",
+    meals: 800.15,
+    mealsReference: "Vouchers-08-2026",
+    advance: 500.25,
+    advanceReference: "Advance-08-2026",
+  });
+  const run = {
+    id: "89000000-0000-4000-8000-000000000001",
+    organisation_id: "org",
+    status: "approved",
+    month: "2026-08-01",
+    revision: 2,
+    approved_at: "2026-09-02T10:00:00Z",
+  };
+  const item = {
+    run_id: run.id,
+    organisation_id: "org",
+    input: facts,
+    result: calculatePayroll(facts),
+    source: { company: input.company, employee: input.employee },
+  };
+  for (const locale of ["ro", "en"]) {
+    const bytes = await generateApprovedPayrollPdf(
+      run,
+      item,
+      locale,
+      "HRConnector",
+    );
+    const pdf = await PDFDocument.load(bytes);
+    assert.match(pdf.getTitle(), /2026-08 - r2$/);
+    assert.ok(pdf.getPageCount() <= 2);
+    await sample(`approved-payroll-${locale}`, bytes);
+  }
+  await assert.rejects(
+    generateApprovedPayrollPdf(
+      { ...run, status: "draft" },
+      item,
+      "ro",
+      "HRConnector",
+    ),
+  );
+  await assert.rejects(
+    generateApprovedPayrollPdf(
+      run,
+      { ...item, organisation_id: "other" },
+      "ro",
+      "HRConnector",
+    ),
+  );
+  await assert.rejects(
+    generateApprovedPayrollPdf(
+      run,
+      { ...item, run_id: "other" },
+      "ro",
+      "HRConnector",
+    ),
+  );
 });
 test("unsupported glyphs, empty files, fake headers and encrypted PDFs fail safely", async () => {
   await assert.rejects(

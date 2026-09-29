@@ -56,9 +56,11 @@ These are checked implementation examples, not independent accountant approval.
 
 ## Server checks, evidence and exclusions
 
-PDF generation rechecks active employee status, one overlapping active RON contract covering the whole month, and matching basic salary/hours. Recorded approved leave and absences block generation. HR must explicitly review benefits and confirm that all payroll-relevant benefits are the meal vouchers entered; other taxable benefits require separate handling. The previous blanket active-benefit block is replaced by that declaration. The app does not automatically classify catalogue benefits or import approved allocations as issued vouchers.
+With migration 015, draft saving and approval recheck active employee status, one overlapping active RON contract covering the whole month, and matching basic salary/hours. Recorded approved leave and absences block the supported workflow. HR must explicitly review benefits and confirm that all payroll-relevant benefits are the meal vouchers entered; other taxable benefits require separate handling. The app does not automatically classify catalogue benefits or import approved allocations as issued vouchers. Only completed months can be approved; PDFs use the immutable approved snapshot. See [monthly approval and corrections](payroll-runs.md).
 
-Unsupported: other tax years, amounts with more than two decimals, partial months, leave adjustments, historical contract reconstruction, foreign tax/social-security situations, special working conditions, other benefits, income-tax exemptions, other deductible expenses and garnishments. No automatic attendance-based gross-pay proration, D112, accounting posting, payroll-run ledger/corrections or bank execution.
+Manual attendance whose planned/worked hours differ from the contractual day also blocks saving/approval, even when its absence category is `none`. Reduced days, no-shows and extra hours need separate payroll handling; no attendance-based proration is inferred.
+
+Unsupported: other tax years, amounts with more than two decimals, partial months, leave adjustments, historical contract reconstruction, foreign tax/social-security situations, special working conditions, other benefits, income-tax exemptions, other deductible expenses and garnishments. No automatic attendance-based gross-pay proration, D112, accounting posting or bank execution. Saved payroll revisions preserve approved calculations but do not reconstruct missing historical contracts.
 
 PDFs snapshot inputs, references, calculations, period and rule version and start HR-only. References should contain no diagnoses or other people's identifiers. After review HR can make an individual document employee-visible and explicitly email it. Regeneration creates a new document; archive superseded copies. A PDF or successful email does not prove salary payment.
 
@@ -72,4 +74,4 @@ PDFs snapshot inputs, references, calculations, period and rule version and star
 - [Fiscal Code norms, title IV, norm 4 under article 64](https://legislatie.just.ro/Public/DetaliiDocument/245650): rounding the income-tax base to whole lei before calculating tax.
 - [OUG 59/2005, article 1](https://legislatie.just.ro/Public/DetaliiDocument/69521): general whole-leu rounding of taxes/contributions; the specific Title IV convention is described above.
 
-Next expansions require confirmed cases and independent reference outputs: partial months/leave pay, other benefits and deductions, special exemptions, corrections and employer-level reporting. Never silently reuse 2026 rules for another year.
+Next expansions require confirmed cases and independent reference outputs: partial months/leave pay, other benefits and deductions, special exemptions and employer-level reporting. Never silently reuse 2026 rules for another year.

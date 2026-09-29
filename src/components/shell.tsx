@@ -93,7 +93,7 @@ export function AppShell({
           {
             href: "/payroll",
             label:
-              locale === "ro" ? "Calculator salarial" : "Payroll calculator",
+              locale === "ro" ? "Salarizare lunară" : "Monthly payroll",
             icon: Files,
           },
         ]

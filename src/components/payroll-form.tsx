@@ -3,6 +3,7 @@ import { useActionState, useRef, useState } from "react";
 import {
   calculatePayroll,
   floorExceptions,
+  type PayrollInput,
   type PayrollResult,
 } from "@/lib/payroll";
 import {
@@ -10,25 +11,38 @@ import {
   payrollRows,
   floorExceptionLabels,
 } from "@/lib/payroll-i18n";
-import { generatePayslip } from "@/app/(workspace)/payroll/actions";
+import { savePayrollEntry } from "@/app/(workspace)/payroll/actions";
+import { payrollRunDictionary } from "@/lib/payroll-run-i18n";
 import { moneyLabel, type Locale } from "@/lib/i18n";
 export function PayrollForm({
   employeeId,
   basic,
   hours,
   locale,
+  runId,
+  runVersion,
+  month,
+  savedInput,
 }: {
   employeeId: string;
   basic?: number;
   hours?: number;
   locale: Locale;
+  runId: string;
+  runVersion: number;
+  month: string;
+  savedInput?: PayrollInput;
 }) {
-  const [state, submit, pending] = useActionState(generatePayslip, {}),
+  const [state, submit, pending] = useActionState(savePayrollEntry, {}),
     [result, setResult] = useState<PayrollResult | null>(null),
     [error, setError] = useState(false),
     form = useRef<HTMLFormElement>(null),
-    d = payrollDictionary(locale);
+    d = payrollDictionary(locale),
+    rd = payrollRunDictionary(locale);
+  const value = (key: keyof PayrollInput, fallback: string | number = "") =>
+    state.values?.[key] ?? savedInput?.[key] ?? fallback;
   function calculate() {
+    if (!form.current?.reportValidity()) return;
     try {
       setResult(
         calculatePayroll(Object.fromEntries(new FormData(form.current!))),
@@ -48,8 +62,13 @@ export function PayrollForm({
         setError(false);
       }}
       className="form-stack"
+      onSubmit={(event) => {
+        if (!result) event.preventDefault();
+      }}
     >
       <input name="employee_id" type="hidden" value={employeeId} />
+      <input name="run_id" type="hidden" value={runId} />
+      <input name="run_version" type="hidden" value={runVersion} />
       {(state.error || error) && (
         <p className="notice error" role="alert">
           {error ? d.invalid : state.error}
@@ -70,7 +89,8 @@ export function PayrollForm({
               min="2026-01"
               max="2026-12"
               required
-              defaultValue={state.values?.month ?? "2026-09"}
+              value={month}
+              readOnly
             />
           </label>
           <label className="field">
@@ -82,7 +102,7 @@ export function PayrollForm({
               max="8"
               step="0.01"
               required
-              defaultValue={state.values?.hours ?? hours ?? 8}
+              defaultValue={value("hours", hours ?? 8)}
             />
           </label>
           {(["basic", "bonus", "meals", "advance"] as const).map((k) => (
@@ -95,7 +115,7 @@ export function PayrollForm({
                 min={k === "basic" ? 0.01 : 0}
                 max="1000000"
                 required
-                defaultValue={state.values?.[k] ?? (k === "basic" ? basic : 0)}
+                defaultValue={value(k, k === "basic" ? (basic ?? "") : 0)}
               />
             </label>
           ))}
@@ -103,7 +123,7 @@ export function PayrollForm({
             <span>{d.floorException}</span>
             <select
               name="floorException"
-              defaultValue={state.values?.floorException ?? "none"}
+              defaultValue={value("floorException", "none")}
             >
               {floorExceptions.map((key) => (
                 <option value={key} key={key}>
@@ -116,18 +136,14 @@ export function PayrollForm({
             (key) => (
               <label className="field" key={key}>
                 <span>{d[key]}</span>
-                <input
-                  name={key}
-                  maxLength={120}
-                  defaultValue={state.values?.[key] ?? ""}
-                />
+                <input name={key} maxLength={120} defaultValue={value(key)} />
               </label>
             ),
           )}
           {(["primary", "young", "reduced"] as const).map((k) => (
             <label className="field" key={k}>
               <span>{d[k]}</span>
-              <select name={k} defaultValue={state.values?.[k] ?? ""} required>
+              <select name={k} defaultValue={value(k)} required>
                 <option value="">—</option>
                 <option value="yes">{d.yes}</option>
                 <option value="no">{d.no}</option>
@@ -144,12 +160,13 @@ export function PayrollForm({
                 max={k === "dependants" ? 4 : 20}
                 step="1"
                 required
-                defaultValue={state.values?.[k] ?? 0}
+                defaultValue={value(k, 0)}
               />
             </label>
           ))}
         </div>
         <p className="time-help">{d.scope}</p>
+        <p className="time-help">{rd.hoursScope}</p>
         <p className="time-help">{d.floorHelp}</p>
         <p className="time-help">{d.referencesHelp}</p>
         <label className="benefit-confirm">
@@ -185,9 +202,10 @@ export function PayrollForm({
             </p>
           </section>
         )}
-        <p className="time-help">{d.salaryPrivate}</p>
+        <p className="time-help">{rd.savedHelp}</p>
+        <p className="time-help">{rd.sourceHelp}</p>
         <button className="button primary" disabled={!result || pending}>
-          {d.generate}
+          {rd.save}
           {pending ? "…" : ""}
         </button>
       </fieldset>
