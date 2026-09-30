@@ -418,6 +418,10 @@ export function moneyLabel(value: number, locale: Locale) {
 }
 export function actionLabel(action: string, locale: Locale) {
   const labels: Record<string, [string, string]> = {
+    "payroll.handover_prepared": [
+      "Pachet pentru contabil pregătit",
+      "Accountant handover prepared",
+    ],
     "payroll.created": ["Stat salarial creat", "Payroll run created"],
     "payroll.item_saved": [
       "Calcul salarial salvat",

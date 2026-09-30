@@ -29,6 +29,8 @@ Employee privacy review exports now include that employee's saved payroll record
 
 ## Release and checks
 
+Migration **016** adds approved-revision accountant handover packages and preparation history. See [accountant handover](accountant-handover.md) for files, access, historical confirmations, limits and manual checks. The package preserves saved calculations; delivery and accountant validation remain separate.
+
 Apply **202609290015_payroll_runs.sql** once, after verifying migrations 001–014, before deploying this frontend. No new environment variables are needed. The assistant does not apply production migrations or deploy this release.
 
 Manual checks in RO/EN: create a synthetic closed-month draft, save and edit an employee, confirm totals, test stale tabs/source changes, approve, download its PDF, create/approve a correction and view the original history. Verify current-month approval is unavailable, employee/manager denial and suspended/MFA restrictions. Test Storage upload failure recovery and a privacy ZIP containing only the intended employee's payroll. The user manages the development server and signed-in checks.

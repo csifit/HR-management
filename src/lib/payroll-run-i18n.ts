@@ -205,6 +205,10 @@ export function payrollEventLabel(action: string, locale: Locale) {
     approved: ["Revizie aprobată", "Revision approved"],
     discarded: ["Ciornă abandonată", "Draft discarded"],
     document_prepared: ["Fluturaș pregătit", "Payslip prepared"],
+    handover_prepared: [
+      "Pachet pentru contabil pregătit",
+      "Accountant handover prepared",
+    ],
   };
   return labels[action]?.[locale === "ro" ? 0 : 1] ?? action;
 }

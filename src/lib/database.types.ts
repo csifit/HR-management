@@ -47,6 +47,10 @@ import type {
 } from "./payroll-run-types";
 import type { PayrollInput } from "./payroll";
 import type {
+  PayrollHandoverPayload,
+  PayrollHandoverExport,
+} from "./payroll-handover-types";
+import type {
   PrivacyRequest,
   PrivacyEvent,
   PrivacyExport,
@@ -62,6 +66,7 @@ type Table<Row> = {
 export type Database = {
   public: {
     Tables: {
+      payroll_handover_exports: Table<PayrollHandoverExport>;
       payroll_runs: Table<PayrollRun>;
       payroll_run_items: Table<PayrollRunItem>;
       payroll_run_events: Table<PayrollRunEvent>;
@@ -110,6 +115,17 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      prepare_payroll_handover: {
+        Args: {
+          p_org: string;
+          p_run: string;
+          p_version: number;
+          p_locale: string;
+          p_confirm: boolean;
+          p_allow_historical: boolean;
+        };
+        Returns: PayrollHandoverPayload;
+      };
       create_payroll_run: {
         Args: {
           p_org: string;

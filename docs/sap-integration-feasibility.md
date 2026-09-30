@@ -1,5 +1,7 @@
 # SAP integration assessment
 
+**Status: deferred at the user's request.** Retain this assessment for future reference; no further SAP work is scheduled.
+
 Reviewed 29 September 2026. This is a feasibility proposal, not an implemented connector or a claim of SAP certification. No customer SAP system, licence agreement, configuration or sandbox has been inspected.
 
 ## Recommendation

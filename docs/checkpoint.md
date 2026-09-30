@@ -1,6 +1,37 @@
-# Safe checkpoint — 29 September 2026
+# Safe checkpoint — 30 September 2026
+
+## Current state — accountant handover
+
+**This section supersedes older resume instructions below.** The user explicitly selected accountant handover after pausing SAP. Started from committed `1b63db4` (`Current state — monthly payroll approval`). SAP remains deferred. The implementation is local and uncommitted; live migration/deployment status has not been inferred from the commit.
+
+### Implementation
+
+- **Migration 016** adds HR-only export preparation records and `prepare_payroll_handover`. Checked RPCs enforce tenant/role/MFA/active status, approved revision, expected version and explicit scope/historical confirmations under the existing organisation lock. Only projected saved v3 facts are exported; current mutable profiles or calculator rules do not rewrite approved figures. Payroll version and records remain unchanged.
+- Each approved run now offers a RO/EN accountant ZIP: printable summary PDF, detailed payroll CSV, remaining-pay CSV, totals CSV, SHA-256 scope manifest and README. It includes only the saved employee set. Historical revisions need a separate confirmation; current/latest and open-correction context are captured at preparation. Corrected revisions contain full amounts, not deltas.
+- Server-generated files are returned through a same-origin, bounded JSON POST with private/no-store headers. No service-role key, persistent/public ZIP, extra dependency or environment variable. CSV cells protect formula-like text and leading-zero references; amounts/hours use locale decimals. Limits: 200 employees, 2 MiB saved projected JSON, 20 MiB uncompressed and 4 MiB ZIP. Failures never return a partial package.
+- Paginated preparation history records actor/time/language/revision/count/context. It records an attempt before generation and does not prove successful generation, download, delivery or payment. Failed generation/transfer may leave a preparation record; explicit retry records another attempt. Generic audit contains IDs/counts/context, not salary data. Whole-run packages are not included in employee privacy exports.
+- `docs/accountant-handover.md` documents use, scope, corrections, security and manual checks. This is an accountant review package, not SAGA import compatibility, D112 or bank execution. No new tax cases or tax-law claims; accountant reference validation remains outstanding.
+
+### Verification and release boundaries
+
+- **136/136 regression tests passed**, including 25 new handover tests for SQL permissions/tenant/MFA/status/version checks, immutable projections, historical confirmation, correction context, CSV quoting/formula protection, exact bani totals, ZIP hashes/contents, bounded same-origin request handling and RO/EN PDF pagination. Tests use synthetic local/PGlite fixtures; no production services were exercised.
+- **TypeScript, full ESLint, production build and `git diff --check` passed.** Sample RO/EN three-page PDFs were rendered with Poppler and visually inspected; 200-employee long-name fixtures were rendered and checked through all-page contact sheets plus full-page samples. Repeated headers, references and complete row text were retained. Temporary QA outputs were removed.
+- **Apply migration 016 after checking 001–015 migration history, before deploying this frontend.** No remote database or deployment was touched or verified in this turn. Earlier CLI 403 is not proof of logout; do not blindly repair or reapply migrations. Signed-in UI/live download checks remain for the user's normal release process.
+- No commit, push, deployment, production HR changes, email or payment. **Never run `npm run dev`, start another server or stop the user's server.** The user manages VS Code and signed-in checks.
+
+### Next steps
+
+1. Review/apply migration 016 after checking existing history, then deploy through the user's usual process.
+2. Run the synthetic RO/EN checks in `docs/accountant-handover.md`: current/historical/correction downloads, CSV spreadsheet import, PDF layout, attempt history and tenant/role/MFA/status denial.
+3. Compare representative saved payroll outputs with accountant/SAGA references before payment reliance. Remaining core work includes broader payroll cases, REGES submission, signing, provider privacy operations and Stripe/SAGA reconciliation. SAP stays paused.
+
+---
+
+## Earlier checkpoint — 29 September 2026
 
 ## Current state — monthly payroll approval and SAP assessment
+
+**Earlier steering:** the user paused SAP. Accountant handover was subsequently selected and is recorded in the current section above.
 
 **This section supersedes the older resume instructions below.** Started from clean, committed **`bc43a9b` (`Data protection → Privacy requests`)**, containing migration 014/privacy work. The user selected **Monthly payroll approval and history**. During implementation they also requested a feasibility assessment of SAP HR integration; that request is analysis, not authorisation for a live SAP connection.
 

@@ -13,6 +13,7 @@ import {
   payrollEventLabel,
 } from "@/lib/payroll-run-i18n";
 import type { PayrollRunItem } from "@/lib/payroll-run-types";
+import { payrollHandoverDictionary } from "@/lib/payroll-handover-i18n";
 import { idSchema } from "@/lib/validation";
 import { timeEmployees } from "@/lib/time-data";
 import { singleParam } from "@/lib/time";
@@ -20,6 +21,7 @@ import { documentDictionary } from "@/lib/document-i18n";
 import { PageHeader } from "@/components/ui";
 import { EmployeeFilter } from "@/components/time-ui";
 import { PayrollForm } from "@/components/payroll-form";
+import { PayrollHandoverForm } from "@/components/payroll-handover-form";
 import {
   PayrollRunCreateForm,
   PayrollRunApproveForm,
@@ -124,6 +126,7 @@ export default async function PayrollRunPage({
   const { supabase, organisation } = await requireHR(),
     locale = await getLocale(),
     d = payrollRunDictionary(locale),
+    hd = payrollHandoverDictionary(locale),
     pd = payrollDictionary(locale),
     dd = documentDictionary(locale),
     { id } = await params,
@@ -144,39 +147,71 @@ export default async function PayrollRunPage({
     historyPage = Math.min(
       10000,
       Math.max(1, Math.floor(Number(singleParam(q.history))) || 1),
+    ),
+    exportPage = Math.min(
+      10000,
+      Math.max(1, Math.floor(Number(singleParam(q.exports))) || 1),
     );
-  const [entries, events, latest, members] = await Promise.all([
-    supabase
-      .from("payroll_run_items")
-      .select("*")
-      .eq("organisation_id", organisation.id)
-      .eq("run_id", id)
-      .order("updated_at")
-      .order("id")
-      .limit(201),
-    supabase
-      .from("payroll_run_events")
-      .select("*", { count: "exact" })
-      .eq("organisation_id", organisation.id)
-      .eq("run_id", id)
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false })
-      .range((historyPage - 1) * 20, historyPage * 20 - 1),
-    supabase
-      .from("payroll_runs")
-      .select("id,revision")
-      .eq("organisation_id", organisation.id)
-      .eq("month", run.month)
-      .eq("status", "approved")
-      .order("revision", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("organisation_users")
-      .select("user_id,display_name,email")
-      .eq("organisation_id", organisation.id),
-  ]);
-  if (entries.error || events.error || latest.error || members.error)
+  const [entries, events, latest, members, handovers, correction] =
+    await Promise.all([
+      supabase
+        .from("payroll_run_items")
+        .select("*")
+        .eq("organisation_id", organisation.id)
+        .eq("run_id", id)
+        .order("updated_at")
+        .order("id")
+        .limit(201),
+      supabase
+        .from("payroll_run_events")
+        .select("*", { count: "exact" })
+        .eq("organisation_id", organisation.id)
+        .eq("run_id", id)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range((historyPage - 1) * 20, historyPage * 20 - 1),
+      supabase
+        .from("payroll_runs")
+        .select("id,revision")
+        .eq("organisation_id", organisation.id)
+        .eq("month", run.month)
+        .eq("status", "approved")
+        .order("revision", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("organisation_users")
+        .select("user_id,display_name,email")
+        .eq("organisation_id", organisation.id),
+      run.status === "approved"
+        ? supabase
+            .from("payroll_handover_exports")
+            .select("*", { count: "exact" })
+            .eq("organisation_id", organisation.id)
+            .eq("run_id", id)
+            .order("prepared_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range((exportPage - 1) * 20, exportPage * 20 - 1)
+        : { data: [], error: null, count: 0 },
+      run.status === "approved"
+        ? supabase
+            .from("payroll_runs")
+            .select("id")
+            .eq("organisation_id", organisation.id)
+            .eq("month", run.month)
+            .eq("status", "draft")
+            .limit(1)
+            .maybeSingle()
+        : { data: null, error: null },
+    ]);
+  if (
+    entries.error ||
+    events.error ||
+    latest.error ||
+    members.error ||
+    handovers.error ||
+    correction.error
+  )
     throw new Error("Payroll calculations and history could not be loaded.");
   if (entries.data.length > 200)
     throw new Error("Payroll item limit exceeded.");
@@ -262,6 +297,13 @@ export default async function PayrollRunPage({
       latest.data && latest.data.revision > run.revision ? latest.data : null;
   const href = (employeeId: string, page = historyPage) =>
     `?${new URLSearchParams({ employee: employeeId, history: String(page) })}`;
+  const exportHref = (page: number) =>
+    `?${new URLSearchParams({
+      employee: selected,
+      history: String(historyPage),
+      documents: String(documentPage),
+      exports: String(page),
+    })}#handover-history`;
   const timestamp = (value: string) =>
     new Intl.DateTimeFormat(locale === "ro" ? "ro-RO" : "en-GB", {
       timeZone: "Europe/Bucharest",
@@ -356,6 +398,23 @@ export default async function PayrollRunPage({
             </table>
           </div>
         </details>
+      )}
+      {run.status === "approved" && (
+        <section className="card time-form-card">
+          <h2>{hd.title}</h2>
+          <PayrollHandoverForm
+            key={`${id}:${run.version}:${latest.data?.revision ?? run.revision}`}
+            runId={id}
+            runVersion={run.version}
+            month={month}
+            revision={run.revision}
+            locale={locale}
+            isHistorical={!!newer}
+            latestRevision={latest.data?.revision ?? run.revision}
+            hasOpenCorrection={!!correction.data}
+            active={writable}
+          />
+        </section>
       )}
       {run.status === "draft" && people && (
         <>
@@ -497,6 +556,79 @@ export default async function PayrollRunPage({
         <section className="card time-form-card">
           <h2>{d.correction}</h2>
           <PayrollRunCreateForm locale={locale} month={month} previous={id} />
+        </section>
+      )}
+      {run.status === "approved" && (
+        <section className="card table-card" id="handover-history">
+          <div className="card-heading">
+            <h2>{hd.history}</h2>
+          </div>
+          <p className="time-padding time-help">{hd.historyHelp}</p>
+          {!handovers.data.length ? (
+            <p className="time-padding">{hd.noHistory}</p>
+          ) : (
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{hd.preparedAt}</th>
+                    <th>{hd.preparedBy}</th>
+                    <th>{hd.revision}</th>
+                    <th>{hd.employees}</th>
+                    <th>{hd.language}</th>
+                    <th>{hd.context}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {handovers.data.map((record) => (
+                    <tr key={record.id}>
+                      <td>
+                        {timestamp(record.prepared_at)}
+                        <details>
+                          <summary>{hd.reference}</summary>
+                          <small>{record.id}</small>
+                        </details>
+                      </td>
+                      <td>
+                        {members.data.find(
+                          (member) => member.user_id === record.prepared_by,
+                        )?.display_name ?? d.unavailableActor}
+                      </td>
+                      <td>{record.revision}</td>
+                      <td>{record.employee_count}</td>
+                      <td>{record.locale.toUpperCase()}</td>
+                      <td>
+                        {record.is_historical
+                          ? hd.historicalLabel
+                          : hd.currentLabel}
+                        {record.is_historical && (
+                          <>
+                            <br />
+                            {hd.latestRevision}:{" "}
+                            {record.latest_approved_revision}
+                          </>
+                        )}
+                        {record.has_open_correction && (
+                          <>
+                            <br />
+                            {hd.correctionLabel}
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <nav className="heading-actions time-padding" aria-label={hd.history}>
+            {exportPage > 1 && (
+              <Link href={exportHref(exportPage - 1)}>{d.previous}</Link>
+            )}
+            {exportPage * 20 < (handovers.count ?? 0) && (
+              <Link href={exportHref(exportPage + 1)}>{d.next}</Link>
+            )}
+          </nav>
         </section>
       )}
       <section className="card time-form-card">
