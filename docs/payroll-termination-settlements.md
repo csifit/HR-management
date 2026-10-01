@@ -2,6 +2,8 @@
 
 Migration **019**, after **001–018**, adds optional `RO-2026-monthly-v5` entries. It does not rewrite previous approved v3/v4 calculations. Apply the migration before deploying this frontend. No new environment variables.
 
+Migration **020** subsequently adds approved annual leave to v6 entries, including optional reviewed settlement components in the actual termination month. See [annual leave payroll](payroll-annual-leave.md) for that expanded scope. The v5-only boundaries below describe migration 019.
+
 ## Workflow
 
 1. Record the actual inclusive termination date and set the contract to **terminated**. The employee/contract must meet the existing supported-period checks. Planned expiry alone is insufficient. Select the payroll month containing the actual termination date.

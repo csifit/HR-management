@@ -5,6 +5,10 @@ import { PGlite } from "@electric-sql/pglite";
 import { calculatePayroll } from "../src/lib/payroll.ts";
 import { calculatePayrollRun } from "../src/lib/payroll-period.ts";
 import {
+  calculatePayrollWithLeave,
+  payrollWithAnnualSchema,
+} from "../src/lib/payroll-annual-leave.ts";
+import {
   calculatePayrollEntry,
   payrollEntrySchema,
 } from "../src/lib/payroll-settlement.ts";
@@ -164,6 +168,308 @@ const settlement = {
   otherReference: "Severance approval",
   confirmed: "on",
 };
+
+async function annualRequest(from = "2026-01-05", to = "2026-01-06") {
+  const type = await scalar(
+    "select id from leave_types where organisation_id=$1 and category='annual'",
+    [org],
+  );
+  await db.query(
+    "insert into leave_balances(organisation_id,employee_id,leave_type_id,year,allowance) values($1,$2,$3,2026,30) on conflict(organisation_id,employee_id,leave_type_id,year) do nothing",
+    [org, employee, type],
+  );
+  const id = await as(users.hr, () =>
+    scalar("select request_leave($1,$2,$3,$4,$5)", [
+      org,
+      employee,
+      type,
+      from,
+      to,
+    ]),
+  );
+  await as(users.owner, () =>
+    db.query("select decide_leave($1,$2,1,'approved','Reviewed')", [org, id]),
+  );
+  return id;
+}
+async function annualInput(patch = {}) {
+  const c = await context();
+  return payrollWithAnnualSchema.parse({
+    ...(await input()),
+    annualLeave: {
+      confirmed: "on",
+      requests: c.annual_leave.requests.map((r) => ({
+        ...r,
+        dailyGross: 500.25,
+        rateReference: "Accountant-approved rate",
+      })),
+    },
+    ...patch,
+  });
+}
+
+test("annual leave dates come from approval and v6 save/approval/handover matches JS without double pay", async () => {
+  await annualRequest();
+  const value = await annualInput(),
+    run = await create();
+  const item = await save(run, value),
+    actual = await scalar("select result from payroll_run_items where id=$1", [
+      item,
+    ]);
+  assert.deepEqual(actual, calculatePayrollWithLeave(value));
+  assert.equal(actual.cashGross, 10091.41);
+  assert.deepEqual(actual.annualLeave, {
+    workedBasic: 9090.91,
+    leaveGross: 1000.5,
+  });
+  await approve(run);
+  const p = await handover(run);
+  assert.equal(p.format_version, "HRConnector-accountant-v4");
+  assert.deepEqual(p.items[0].input, value);
+  assert.deepEqual(p.items[0].result, actual);
+  await db.query(
+    "update leave_requests set status='cancelled',version=version+1 where employee_id=$1",
+    [employee],
+  );
+  assert.deepEqual((await handover(run)).items[0].result, actual);
+});
+
+test("cross-month approved leave and calendar holidays include only saved working dates in this month", async () => {
+  await as(users.hr, () =>
+    db.query("select save_calendar_day($1,'2026-01-06',false,'Holiday')", [
+      org,
+    ]),
+  );
+  await annualRequest("2026-01-05", "2026-01-07");
+  await annualRequest("2026-01-30", "2026-02-03");
+  const c = await context(),
+    dates = c.annual_leave.requests.flatMap((r) => r.dates).sort();
+  assert.deepEqual(dates, ["2026-01-05", "2026-01-07", "2026-01-30"]);
+  assert.equal(c.period.monthWorkingDays, 21);
+  const value = await annualInput();
+  assert.deepEqual(await calculation(value), calculatePayrollWithLeave(value));
+  await save(await create(), value);
+});
+
+test("all-month leave has zero worked basic; manual zero hours on leave are permitted but no-shows are not", async () => {
+  await as(users.hr, () =>
+    db.query("select save_attendance($1,$2,'2026-01-05',8,0,'none',null)", [
+      org,
+      employee,
+    ]),
+  );
+  await annualRequest("2026-01-01", "2026-01-31");
+  const value = await annualInput();
+  assert.equal((await calculation(value)).annualLeave.workedBasic, 0);
+  await save(await create(), value);
+  await db.query(
+    "update attendance set worked_hours=8 where organisation_id=$1 and employee_id=$2",
+    [org, employee],
+  );
+  await assert.rejects(() => context(), { code: "P0010" });
+});
+
+test("forged request ids/dates, omitted leave, pending decisions and changed calendar fail closed", async () => {
+  await annualRequest();
+  const run = await create(),
+    value = await annualInput();
+  for (const requestPatch of [
+    { id: users.other },
+    { dates: ["2026-01-07"] },
+    { dailyGross: 454.54 },
+    { dates: ["2026-01-05", "2026-01-05"] },
+  ]) {
+    const wrong = {
+      ...value,
+      annualLeave: {
+        ...value.annualLeave,
+        requests: [{ ...value.annualLeave.requests[0], ...requestPatch }],
+      },
+    };
+    await assert.rejects(() => save(run, wrong));
+  }
+  const noLeave = { ...value };
+  delete noLeave.annualLeave;
+  await assert.rejects(() => save(run, noLeave), { code: "P0010" });
+  await db.query(
+    "insert into leave_requests(organisation_id,employee_id,leave_type_id,start_date,end_date,work_dates,submitted_by) select organisation_id,employee_id,leave_type_id,'2026-01-07','2026-01-07',array['2026-01-07'::date],$2 from leave_requests where employee_id=$1 limit 1",
+    [employee, users.hr],
+  );
+  await assert.rejects(() => context(), { code: "P0010" });
+  await db.query(
+    "update leave_requests set status='cancelled' where employee_id=$1 and status='pending'",
+    [employee],
+  );
+  await save(run, value);
+  await db.query(
+    "insert into work_calendar_days(organisation_id,day,is_working,label) values($1,'2026-01-05',false,'Changed calendar')",
+    [org],
+  );
+  await assert.rejects(() => approve(run), { code: "P0010" });
+});
+
+test("leave version changes require re-saving and cancellation requires removing annual pay", async () => {
+  await annualRequest();
+  const run = await create(),
+    value = await annualInput();
+  await save(run, value);
+  await db.query(
+    "update leave_requests set version=version+1 where employee_id=$1",
+    [employee],
+  );
+  await assert.rejects(() => approve(run), { code: "P0010" });
+  await save(run, await annualInput());
+  await db.query(
+    "update leave_requests set status='cancelled',version=version+1 where employee_id=$1",
+    [employee],
+  );
+  await assert.rejects(() => approve(run), { code: "P0010" });
+  await save(run, await input());
+  await approve(run);
+  assert.equal(
+    (await handover(run)).items[0].result.rules,
+    "RO-2026-monthly-v4",
+  );
+});
+
+test("annual pay with termination, part-time and vouchers remains consistent with v6 preview", async () => {
+  await annualRequest();
+  await terminate("2026-01-16");
+  const value = await annualInput({
+    settlement,
+    meals: 200.15,
+    mealsReference: "Actual vouchers",
+    advance: 100,
+    advanceReference: "Already paid",
+  });
+  const run = await create();
+  await save(run, value);
+  await approve(run);
+  assert.deepEqual(
+    (await handover(run)).items[0].result,
+    calculatePayrollWithLeave(value),
+  );
+  assert.equal(
+    (await handover(run)).format_version,
+    "HRConnector-accountant-v4",
+  );
+  const full = value.period;
+  for (const patch of [
+    { basic: 2025, hours: 4 },
+    {
+      basic: 2025,
+      hours: 4,
+      floorException: "student",
+      evidence: "Student certificate",
+    },
+    { primary: "no", deductionEmployer: "other", meals: 0, mealsReference: "" },
+  ]) {
+    const v = payrollWithAnnualSchema.parse({
+      ...value,
+      period: full,
+      ...patch,
+    });
+    assert.deepEqual(await calculation(v), calculatePayrollWithLeave(v));
+  }
+});
+
+test("annual payroll RPCs retain tenant/role/MFA/status/version checks", async () => {
+  await annualRequest();
+  const run = await create(),
+    value = await annualInput();
+  for (const actor of [
+    users.other,
+    users.manager,
+    users.employee,
+    users.platform,
+  ]) {
+    await assert.rejects(() => context({ actor }), { code: "42501" });
+    await assert.rejects(() => save(run, value, { actor }), { code: "42501" });
+  }
+  await assert.rejects(() => save(run, value, { v: 99 }), { code: "P0006" });
+  await db.query(
+    "insert into auth.mfa_factors(user_id,status) values($1,'verified')",
+    [users.hr],
+  );
+  await assert.rejects(() => save(run, value));
+  await db.exec(
+    `select set_config('request.jwt.claims','{"aal":"aal2"}',false)`,
+  );
+  await save(run, value);
+  await db.query(
+    "update organisations set status='suspended',status_reason='Synthetic check' where id=$1",
+    [org],
+  );
+  await assert.rejects(() => save(run, value));
+});
+
+test("annual correction keeps the original approved rates and historical figures immutable", async () => {
+  await annualRequest();
+  const value = await annualInput(),
+    run = await create();
+  await save(run, value);
+  await approve(run);
+  const original = (await handover(run)).items.find(
+    (i) => i.employee_id === employee,
+  );
+  const correction = await create(run),
+    revised = {
+      ...value,
+      annualLeave: {
+        ...value.annualLeave,
+        requests: value.annualLeave.requests.map((r) => ({
+          ...r,
+          dailyGross: 550.75,
+          rateReference: "Revised accountant rate",
+        })),
+      },
+    };
+  await save(correction, revised);
+  await approve(correction);
+  assert.deepEqual(
+    (await handover(run, true)).items.find((i) => i.employee_id === employee),
+    original,
+  );
+  assert.deepEqual(
+    (await handover(correction)).items.find((i) => i.employee_id === employee)
+      .result,
+    calculatePayrollWithLeave(revised),
+  );
+  await assert.rejects(() => save(run, revised), { code: "D0001" });
+});
+
+test("malformed saved annual facts fail before an accountant export is recorded", async () => {
+  await annualRequest();
+  const value = await annualInput(),
+    run = await create();
+  await save(run, value);
+  await approve(run);
+  for (const [column, path, invalid] of [
+    ["input", "{annualLeave,requests,0,dates}", ["2026-01-05", "2026-01-05"]],
+    ["input", "{annualLeave,requests,0,id}", users.other],
+    ["input", "{annualLeave,requests,0,dailyGross}", 0],
+    ["input", "{annualLeave,requests,0,rateReference}", " untrimmed "],
+    ["result", "{annualLeave,workedBasic}", -1],
+    ["result", "{annualLeave,leaveGross}", "bad"],
+    ["result", "{annualLeave}", null],
+    ["result", "{rules}", "RO-2026-monthly-v4"],
+  ])
+    await isolated(async () => {
+      // column is a fixed test whitelist, never external input.
+      await db.query(
+        `update payroll_run_items set ${column}=jsonb_set(${column},$1,$2::jsonb) where run_id=$3 and employee_id=$4`,
+        [path, JSON.stringify(invalid), run, employee],
+      );
+      const before = await scalar(
+        "select count(*)::int from payroll_handover_exports",
+      );
+      await assert.rejects(() => handover(run), { code: "P0010" });
+      assert.equal(
+        await scalar("select count(*)::int from payroll_handover_exports"),
+        before,
+      );
+    });
+});
 test("termination compensation and ordinary severance match JS/SQL with exact bani and separate components", async () => {
   await terminate("2026-01-16");
   assert.equal((await context()).settlement_allowed, true);
@@ -360,7 +666,11 @@ test("mixed v5/v3 handover uses v3 format and a correction preserves the origina
       .result,
     original,
   );
-  assert.equal((await handover(correction)).items[0].input.settlement.days, 6);
+  assert.equal(
+    (await handover(correction)).items.find((i) => i.employee_id === employee)
+      .input.settlement.days,
+    6,
+  );
   await assert.rejects(() => save(run, originalValue), { code: "D0001" });
 });
 

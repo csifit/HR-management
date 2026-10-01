@@ -18,7 +18,7 @@ Migration 013 adds effective-dated organisation/employee weekday schedules, retu
 
 Implemented: full-day annual, medical, unpaid and configurable leave types; manually configured yearly allowances with approved/pending/available totals; employee requests, manager/HR decisions without self approval, cancellation, calendar/list views; daily planned/worked hours, monthly totals and absence categories. Approved leave appears automatically in attendance. Working calendar exceptions, audit, tenant boundaries and access-state enforcement are included.
 
-Setup requires HR to configure yearly allowances and public holidays/company exceptions. Completed working days now count contract hours automatically, per the user's choice, with approved leave taking precedence and manual corrections preserved. Today/future days remain planned. Missing/ambiguous/inactive contracts do not produce assumed work; the legacy eight-hour planning fallback remains. No clock-in/out, shift calendars, partial-day leave, automatic legal accrual or automatic leave-pay calculation.
+Setup requires HR to configure yearly allowances and public holidays/company exceptions. Completed working days count contract hours automatically, with approved leave taking precedence and manual corrections preserved. Today/future days remain planned. Missing/ambiguous/inactive contracts do not produce assumed work; the legacy eight-hour planning fallback remains. No clock-in/out, rotating shifts, partial-day leave or automatic legal accrual. Annual leave payroll at accountant-approved rates is covered in Phase 7; rate derivation remains external.
 
 ## Phase 4 — Benefits
 
@@ -46,7 +46,9 @@ Migrations 017–018 add normal mid-month starter/leaver calculations (v4), actu
 
 Migration 019 adds optional reviewed termination settlements (v5): confirmed unused days, an accountant-approved daily gross rate, evidenced other ordinary taxable termination pay, source rechecks and saved components in payslips/v3 accountant packages. See [settlement workflow](payroll-termination-settlements.md). The usability pass groups payroll entry, highlights key figures, compacts attendance and removes unavailable navigation; see [review and follow-ups](usability-review.md).
 
-Remaining: accountant reference validation (including fractional earnings and rounding boundaries), partial-month minimum-wage relief rounding, annual/medical leave pay and unsupported final-settlement cases, other benefits, income-tax exemptions, other deductions, D112 and accounting-system adapters. No bank payment execution. Broader payroll coverage must be added as tested, versioned rules, never inferred silently.
+Migration 020 adds approved annual leave payroll (v6), per-request accountant-approved daily rates and evidence, current-basic minimum checks, worked-basic replacement and ordinary taxable leave cash. Approval rechecks leave/calendar/employment sources; payslips and v4 accountant packages retain saved components and full request facts without recalculating. Historic rate derivation and pre-leave payment execution remain external. See [annual leave workflow](payroll-annual-leave.md).
+
+Remaining: accountant reference validation (including fractional earnings and rounding boundaries), partial-month minimum-wage relief rounding, medical/unpaid leave pay and unsupported final-settlement cases, historical pay-component/rate calculation, cross-month prepayment reconciliation, other benefits, income-tax exemptions, other deductions, D112 and accounting-system adapters. No bank payment execution. Broader payroll coverage must be added as tested, versioned rules, never inferred silently.
 
 ## SAP connector — deferred
 

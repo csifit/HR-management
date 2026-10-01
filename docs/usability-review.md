@@ -1,6 +1,6 @@
 # Usability review — 1 October 2026
 
-Source review and read-only inspection of the deployed dashboard, employee directory, attendance and payroll found repeated help text, equally weighted totals and unavailable navigation. No live HR records were changed. The local updates below still require deployment and the owner's screen checks.
+Source review and read-only inspection of the deployed dashboard, employee directory, attendance and payroll found repeated help text, equally weighted totals and unavailable navigation. No live HR records were changed. The owner subsequently reported migration 019 applied and the updates deployed on 1 October 2026. Signed-in screen checks remain separate from that release report.
 
 ## Implemented in this pass
 
@@ -13,7 +13,7 @@ Source review and read-only inspection of the deployed dashboard, employee direc
 
 ## Suggested follow-ups, in priority order
 
-1. **Accountant validation and payroll coverage:** the calculator's case boundaries remain more consequential than visual changes. Compare representative outputs with SAGA, then annual leave pay, medical leave and remaining final-settlement cases as independently reviewed versioned rules.
+1. **Accountant validation and payroll coverage:** annual leave at accountant-approved rates is implemented locally in migration 020. Compare representative outputs with SAGA, then address medical/unpaid leave, rate history and remaining final-settlement cases as independently reviewed versioned rules.
 2. **Actionable dashboard:** one concise work queue for leave awaiting decisions, contract review, onboarding and payroll drafts. Link each count to the relevant filtered list and preserve employee-only scope.
 3. **Filters and empty states:** remember month/employee context across related modules; distinguish no records from no search results; offer context-appropriate next actions. Keep query-based links shareable and avoid automatic submission on text typing.
 4. **Profile navigation:** related-module links still share space with profile tabs. A separate compact related-records section would make the hierarchy clearer on phones.

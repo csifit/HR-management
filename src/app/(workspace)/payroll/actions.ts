@@ -4,11 +4,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireHR } from "@/lib/auth";
 import { PartialPayrollReliefReview } from "@/lib/payroll-period";
+import { payrollSettlementFromForm } from "@/lib/payroll-settlement";
 import {
-  payrollEntrySchema,
-  calculatePayrollEntry,
-  payrollSettlementFromForm,
-} from "@/lib/payroll-settlement";
+  payrollWithAnnualSchema,
+  calculatePayrollWithLeave,
+  payrollAnnualFromForm,
+} from "@/lib/payroll-annual-leave";
 import { payrollPeriodDictionary } from "@/lib/payroll-period-i18n";
 import { payrollRunDictionary } from "@/lib/payroll-run-i18n";
 import { getLocale } from "@/lib/locale";
@@ -22,7 +23,7 @@ const versioned = z.object({
   run_version: z.coerce.number().int().positive(),
 });
 const saveSchema = z.intersection(
-  payrollEntrySchema,
+  payrollWithAnnualSchema,
   versioned.extend({
     employee_id: z.uuid(),
     benefits_reviewed: z.literal("on"),
@@ -95,8 +96,10 @@ export async function savePayrollEntry(
   const c = await requireHR(true),
     values = formValues(form);
   let period: unknown;
+  let annualLeave: unknown;
   try {
     period = JSON.parse(values.period);
+    annualLeave = payrollAnnualFromForm(values);
   } catch {
     return outcome({ code: "22023" }, values);
   }
@@ -104,12 +107,13 @@ export async function savePayrollEntry(
     ...values,
     period,
     settlement: payrollSettlementFromForm(values),
+    annualLeave,
   });
   if (!parsed.success) return outcome({ code: "22023" }, values);
   const v = parsed.data,
-    input = payrollEntrySchema.parse(v);
+    input = payrollWithAnnualSchema.parse(v);
   try {
-    calculatePayrollEntry(input);
+    calculatePayrollWithLeave(input);
   } catch (error) {
     return outcome(
       { code: error instanceof PartialPayrollReliefReview ? "P0014" : "22023" },

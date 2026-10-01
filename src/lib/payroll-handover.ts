@@ -2,6 +2,7 @@ import { z } from "zod";
 import { payrollPeriodSchema } from "./payroll-period.ts";
 import { payrollPeriodDictionary } from "./payroll-period-i18n.ts";
 import { payrollSettlementDictionary } from "./payroll-settlement-i18n.ts";
+import { payrollAnnualDictionary } from "./payroll-annual-i18n.ts";
 import {
   payrollRows,
   payrollDictionary,
@@ -15,6 +16,7 @@ import type {
 export const HANDOVER_FORMAT = "HRConnector-accountant-v1";
 export const HANDOVER_PERIOD_FORMAT = "HRConnector-accountant-v2";
 export const HANDOVER_SETTLEMENT_FORMAT = "HRConnector-accountant-v3";
+export const HANDOVER_ANNUAL_FORMAT = "HRConnector-accountant-v4";
 const textField = z.string().max(500);
 const savedMoney = z
   .number()
@@ -22,7 +24,7 @@ const savedMoney = z
   .min(0)
   .max(2000000)
   .refine((n) => Math.round(n * 100) / 100 === n);
-// Saved v3/v4/v5 formats, independent of later calculator validation/rules.
+// Saved v3/v4/v5/v6 formats, independent of later calculator validation/rules.
 // No coercion, defaults or text trimming may change approved facts on export.
 const savedInput = z.object({
   month: z.string().regex(/^2026-(0[1-9]|1[0-2])$/),
@@ -51,6 +53,28 @@ const savedInput = z.object({
   period: payrollPeriodSchema.optional(),
   deductionEmployer: z.enum(["this", "other"]).optional(),
   deductionReference: z.string().max(120).optional(),
+  annualLeave: z
+    .object({
+      confirmed: z.literal("on"),
+      requests: z
+        .array(
+          z
+            .object({
+              id: z.uuid(),
+              dates: z
+                .array(z.string().regex(/^2026-(0[1-9]|1[0-2])-\d{2}$/))
+                .min(1)
+                .max(31),
+              dailyGross: savedMoney.positive().max(1000000),
+              rateReference: z.string().min(3).max(120),
+            })
+            .strict(),
+        )
+        .min(1)
+        .max(31),
+    })
+    .strict()
+    .optional(),
   settlement: z
     .object({
       days: savedMoney.max(365),
@@ -69,9 +93,17 @@ const savedResult = z.object({
     "RO-2026-monthly-v3",
     "RO-2026-monthly-v4",
     "RO-2026-monthly-v5",
+    "RO-2026-monthly-v6",
   ]),
   month: z.string(),
   ...Object.fromEntries(payrollRows.map((key) => [key, savedMoney])),
+  annualLeave: z
+    .object({
+      workedBasic: savedMoney.max(1000000),
+      leaveGross: savedMoney.positive().max(1000000),
+    })
+    .strict()
+    .optional(),
   settlement: z
     .object({
       unusedLeaveGross: savedMoney.max(1000000),
@@ -89,6 +121,7 @@ const payloadSchema = z.object({
     HANDOVER_FORMAT,
     HANDOVER_PERIOD_FORMAT,
     HANDOVER_SETTLEMENT_FORMAT,
+    HANDOVER_ANNUAL_FORMAT,
   ]),
   run: z.object({
     id: z.uuid(),
@@ -136,7 +169,8 @@ export function validatePayrollHandover(raw: unknown): PayrollHandoverPayload {
         i.input.month !== data.run.month.slice(0, 7) ||
         i.result.month !== i.input.month ||
         (i.result.rules === "RO-2026-monthly-v4" ||
-        i.result.rules === "RO-2026-monthly-v5"
+        i.result.rules === "RO-2026-monthly-v5" ||
+        i.result.rules === "RO-2026-monthly-v6"
           ? !i.input.period ||
             i.input.period.start.slice(0, 7) !== i.input.month ||
             !i.input.deductionEmployer ||
@@ -151,17 +185,25 @@ export function validatePayrollHandover(raw: unknown): PayrollHandoverPayload {
           : i.input.period !== undefined ||
             i.input.deductionEmployer !== undefined ||
             i.input.deductionReference !== undefined) ||
-        (i.result.rules === "RO-2026-monthly-v5"
+        (i.result.rules === "RO-2026-monthly-v5" ||
+        (i.result.rules === "RO-2026-monthly-v6" &&
+          i.input.settlement !== undefined)
           ? !validSavedSettlement(i)
           : i.input.settlement !== undefined ||
-            i.result.settlement !== undefined),
+            i.result.settlement !== undefined) ||
+        (i.result.rules === "RO-2026-monthly-v6"
+          ? !validSavedAnnual(i)
+          : i.input.annualLeave !== undefined ||
+            i.result.annualLeave !== undefined),
     ) ||
     data.format_version !==
-      (data.items.some((i) => i.result.rules === "RO-2026-monthly-v5")
-        ? HANDOVER_SETTLEMENT_FORMAT
-        : data.items.some((i) => i.result.rules === "RO-2026-monthly-v4")
-          ? HANDOVER_PERIOD_FORMAT
-          : HANDOVER_FORMAT) ||
+      (data.items.some((i) => i.result.rules === "RO-2026-monthly-v6")
+        ? HANDOVER_ANNUAL_FORMAT
+        : data.items.some((i) => i.result.rules === "RO-2026-monthly-v5")
+          ? HANDOVER_SETTLEMENT_FORMAT
+          : data.items.some((i) => i.result.rules === "RO-2026-monthly-v4")
+            ? HANDOVER_PERIOD_FORMAT
+            : HANDOVER_FORMAT) ||
     data.latest_approved_revision < data.run.revision ||
     data.is_historical !== data.latest_approved_revision > data.run.revision ||
     (data.latest_approved_run_id === data.run.id) !== !data.is_historical
@@ -204,6 +246,38 @@ function validSavedSettlement(i: PayrollHandoverPayload["items"][number]) {
   return s.otherGross > 0
     ? s.otherReference.length >= 3
     : s.otherReference === "";
+}
+
+function validSavedAnnual(i: PayrollHandoverPayload["items"][number]) {
+  const a = i.input.annualLeave,
+    p = i.input.period;
+  if (!a || !p || !i.result.annualLeave) return false;
+  const dates = a.requests.flatMap((r) => r.dates),
+    ids = a.requests.map((r) => r.id);
+  if (
+    dates.length > p.employedWorkingDays ||
+    new Set(dates).size !== dates.length ||
+    new Set(ids).size !== ids.length ||
+    ids.some((id, n) => n > 0 && id <= ids[n - 1])
+  )
+    return false;
+  return a.requests.every(
+    (r) =>
+      r.rateReference === r.rateReference.trim() &&
+      r.dates.every((v, n) => {
+        const d = new Date(`${v}T12:00:00Z`);
+        return (
+          Number.isFinite(d.getTime()) &&
+          d.toISOString().slice(0, 10) === v &&
+          d.getUTCDay() !== 0 &&
+          d.getUTCDay() !== 6 &&
+          v.slice(0, 7) === i.input.month &&
+          v >= p.start &&
+          v <= p.end &&
+          (n === 0 || v > r.dates[n - 1])
+        );
+      }),
+  );
 }
 
 export function payrollHandoverTotals(
@@ -252,7 +326,8 @@ export function payrollHandoverCsvs(payload: PayrollHandoverPayload) {
   const periodD = payrollPeriodDictionary(payload.locale),
     includePeriod = payload.format_version !== HANDOVER_FORMAT;
   const includeSettlement =
-      payload.format_version === HANDOVER_SETTLEMENT_FORMAT,
+      payload.format_version === HANDOVER_SETTLEMENT_FORMAT ||
+      payload.format_version === HANDOVER_ANNUAL_FORMAT,
     sd = payrollSettlementDictionary(payload.locale);
   const settlementHeader = includeSettlement
     ? [
@@ -263,6 +338,18 @@ export function payrollHandoverCsvs(payload: PayrollHandoverPayload) {
         sd.rateReference,
         sd.otherGross,
         sd.otherReference,
+      ]
+    : [];
+  const includeAnnual = payload.format_version === HANDOVER_ANNUAL_FORMAT,
+    ad = payrollAnnualDictionary(payload.locale);
+  const annualHeader = includeAnnual
+    ? [
+        ad.days,
+        ad.workedBasic,
+        ad.leaveGross,
+        ro
+          ? "Cereri aprobate / tarife / referințe"
+          : "Approved requests / rates / references",
       ]
     : [];
   const money = (n: number) => n.toFixed(2).replace(".", ro ? "," : ".");
@@ -321,6 +408,7 @@ export function payrollHandoverCsvs(payload: PayrollHandoverPayload) {
       ...employeeHeader,
       ...periodHeader,
       ...settlementHeader,
+      ...annualHeader,
       ...inputs.map((k) => d[k]),
       ...payrollRows.map((k) => d[k]),
       d.rules,
@@ -346,13 +434,14 @@ export function payrollHandoverCsvs(payload: PayrollHandoverPayload) {
             p.monthWorkingDays,
             p.employedWorkingDays,
             money(
-              (Math.round(item.result.cashGross * 100) -
-                Math.round(item.input.bonus * 100) -
-                Math.round(
-                  (item.result.settlement?.unusedLeaveGross ?? 0) * 100,
-                ) -
-                Math.round((item.result.settlement?.otherGross ?? 0) * 100)) /
-                100,
+              item.result.annualLeave?.workedBasic ??
+                (Math.round(item.result.cashGross * 100) -
+                  Math.round(item.input.bonus * 100) -
+                  Math.round(
+                    (item.result.settlement?.unusedLeaveGross ?? 0) * 100,
+                  ) -
+                  Math.round((item.result.settlement?.otherGross ?? 0) * 100)) /
+                  100,
             ),
             item.input.deductionEmployer === "this"
               ? periodD.thisEmployer
@@ -385,6 +474,19 @@ export function payrollHandoverCsvs(payload: PayrollHandoverPayload) {
               item.input.settlement.otherReference,
             ]
           : ["", "", "", "", "", "", ""]
+        : []),
+      ...(includeAnnual
+        ? item.input.annualLeave && item.result.annualLeave
+          ? [
+              item.input.annualLeave.requests.reduce(
+                (n, r) => n + r.dates.length,
+                0,
+              ),
+              money(item.result.annualLeave.workedBasic),
+              money(item.result.annualLeave.leaveGross),
+              JSON.stringify(item.input.annualLeave.requests),
+            ]
+          : ["", "", "", ""]
         : []),
       ...inputs.map((k) => {
         const v = item.input[k];

@@ -5,6 +5,7 @@ import { PDFDocument, rgb } from "pdf-lib";
 import { UnsupportedPdfText } from "./document-pdf.ts";
 import { payrollHandoverTotals } from "./payroll-handover.ts";
 import { payrollSettlementDictionary } from "./payroll-settlement-i18n.ts";
+import { payrollAnnualDictionary } from "./payroll-annual-i18n.ts";
 import type {
   PayrollHandoverPayload,
   PayrollMoneyKey,
@@ -405,6 +406,9 @@ export async function generatePayrollHandoverPdf(
         : "") +
       (item.input.settlement
         ? `\n${ro ? "Lichidare: vezi detalierea" : "Settlement: see breakdown"}`
+        : "") +
+      (item.input.annualLeave
+        ? `\n${ro ? "Concediu plătit: vezi detalierea" : "Paid leave: see breakdown"}`
         : "")
     );
   };
@@ -515,6 +519,63 @@ export async function generatePayrollHandoverPdf(
         },
       ],
       settlements,
+    );
+  }
+  const annualItems = payload.items.filter(
+    (item) => item.input.annualLeave && item.result.annualLeave,
+  );
+  if (annualItems.length) {
+    const ad = payrollAnnualDictionary(payload.locale);
+    table(
+      ad.title,
+      ro
+        ? "RON. Indemnizația înlocuiește salariul de bază pentru datele aprobate; este deja inclusă în brut, taxe și net."
+        : "RON. Leave pay replaces basic pay for approved dates and is already included in gross, taxes and net.",
+      [
+        {
+          title: ro ? "Angajat / contract" : "Employee / contract",
+          width: 150,
+          value: (item) => `${item.employee_name}\n${item.contract_number}`,
+        },
+        {
+          title: ro ? "Zile CO" : "Leave days",
+          width: 70,
+          right: true,
+          value: (item) =>
+            String(
+              item.input.annualLeave!.requests.reduce(
+                (n, r) => n + r.dates.length,
+                0,
+              ),
+            ),
+        },
+        {
+          title: ro ? "Bază brută lucrată" : "Worked basic",
+          width: 105,
+          right: true,
+          value: (item) => money(item.result.annualLeave!.workedBasic),
+        },
+        {
+          title: ro ? "Indemnizație brută" : "Leave gross",
+          width: 105,
+          right: true,
+          value: (item) => money(item.result.annualLeave!.leaveGross),
+        },
+        {
+          title: ro
+            ? "Date / tarif aprobat / referință"
+            : "Dates / approved rate / reference",
+          width: width - 430,
+          value: (item) =>
+            item.input
+              .annualLeave!.requests.map(
+                (r) =>
+                  `${r.dates.join(", ")}\n${money(r.dailyGross)} ${ro ? "RON/zi" : "RON/day"} | ${r.rateReference}\n${r.id}`,
+              )
+              .join("\n"),
+        },
+      ],
+      annualItems,
     );
   }
   const pages = pdf.getPages();

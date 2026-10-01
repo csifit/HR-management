@@ -74,7 +74,7 @@ const en = {
   sourceHelp:
     "Saving checks the current contract, schedule, attendance and benefits confirmation. If source data changes before approval, review and save the affected calculations again.",
   payrollScope:
-    "Supports normal full months, dated starters/leavers and reviewed fully taxable termination pay in 2026. Unused leave uses an HR-confirmed balance and accountant-approved daily rate. Partial-month minimum-wage relief and leave adjustments need separate handling. Approval remains an internal HR review.",
+    "Supports normal full months, dated starters/leavers, approved annual leave and reviewed fully taxable termination pay in 2026. Leave rates are approved by the accountant; unused leave also needs an HR-confirmed balance. Partial-month minimum-wage relief, medical/unpaid leave and other adjustments need separate handling. Approval remains an internal HR review.",
   invalid: "Check the form fields and required confirmations.",
   error: "Payroll could not be saved. Try again.",
   stale:
@@ -167,7 +167,7 @@ const ro: typeof en = {
   sourceHelp:
     "Salvarea verifică datele actuale despre contract, program, pontaj și confirmarea beneficiilor. Dacă acestea se schimbă înainte de aprobare, verifică și salvează din nou calculele afectate.",
   payrollScope:
-    "Acceptă luni complete, angajări/încetări cu date efective și sume de lichidare verificate, integral impozabile, din 2026. Concediul neefectuat folosește soldul confirmat de HR și tariful zilnic aprobat de contabil. Suma neimpozabilă la salariul minim pentru luni parțiale și ajustările de concediu se tratează separat. Aprobarea rămâne o verificare internă HR.",
+    "Acceptă luni complete, angajări/încetări cu date efective, concediu de odihnă aprobat și sume de lichidare verificate, integral impozabile, din 2026. Tarifele de concediu sunt aprobate de contabil; concediul neefectuat necesită și soldul confirmat de HR. Suma neimpozabilă la salariul minim pentru luni parțiale, concediul medical/neplătit și alte ajustări se tratează separat. Aprobarea rămâne o verificare internă HR.",
   invalid: "Verifică datele introduse și confirmările obligatorii.",
   error: "Nu am putut salva salarizarea. Încearcă din nou.",
   stale:

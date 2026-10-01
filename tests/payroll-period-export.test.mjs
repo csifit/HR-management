@@ -28,6 +28,10 @@ import {
 import { buildPayrollHandoverArchive } from "../src/lib/payroll-handover-archive.ts";
 import { generateApprovedPayrollPdf } from "../src/lib/payroll-run-pdf.ts";
 import { generatePayrollHandoverPdf } from "../src/lib/payroll-handover-pdf.ts";
+import {
+  calculatePayrollWithLeave,
+  payrollWithAnnualSchema,
+} from "../src/lib/payroll-annual-leave.ts";
 
 const ids = Array.from(
   { length: 7 },
@@ -108,6 +112,230 @@ function fixture(locale = "ro") {
     ],
   };
 }
+
+function annualFixture(locale = "ro") {
+  const p = fixture(locale),
+    item = p.items[0];
+  p.format_version = "HRConnector-accountant-v4";
+  item.input = payrollWithAnnualSchema.parse({
+    ...item.input,
+    annualLeave: {
+      requests: [
+        {
+          id: "d1000000-0000-4000-8000-000000000001",
+          dates: ["2026-07-02", "2026-07-03"],
+          dailyGross: 110.25,
+          rateReference: "Contabil CO iulie",
+        },
+      ],
+      confirmed: "on",
+    },
+  });
+  item.result = calculatePayrollWithLeave(item.input);
+  return p;
+}
+
+test("v6 RO/EN exports preserve saved annual components, request evidence and hashes without recalculating", async () => {
+  for (const locale of ["ro", "en"]) {
+    const p = annualFixture(locale),
+      item = p.items[0];
+    // Download must retain these deliberately changed approved amounts.
+    item.result.annualLeave.workedBasic = 1316.41;
+    item.result.annualLeave.leaveGross = 231.5;
+    item.result.cashGross += 11;
+    const valid = validatePayrollHandover(p),
+      rows = csvRows(payrollHandoverCsvs(valid)["payroll.csv"]);
+    assert.equal(rows[0].length, rows[1].length);
+    assert.equal(rows[0].length, rows[2].length);
+    assert.equal(rows[1][16], locale === "ro" ? "1316,41" : "1316.41");
+    assert.deepEqual(
+      rows[1].slice(26, 29),
+      locale === "ro" ? ["2", "1316,41", "231,50"] : ["2", "1316.41", "231.50"],
+    );
+    assert.deepEqual(JSON.parse(rows[1][29]), item.input.annualLeave.requests);
+    assert.deepEqual(rows[2].slice(26, 30), ["", "", "", ""]);
+    const archive = unzipSync(
+        await buildPayrollHandoverArchive(valid, "HRConnector"),
+      ),
+      manifest = JSON.parse(strFromU8(archive["manifest.json"]));
+    assert.deepEqual(
+      manifest.employees[0].annual_leave,
+      item.input.annualLeave,
+    );
+    assert.deepEqual(
+      manifest.employees[0].annual_leave_amounts,
+      item.result.annualLeave,
+    );
+    assert.match(strFromU8(archive["README.txt"]), /Format v4/);
+    for (const f of manifest.files)
+      assert.equal(
+        f.sha256,
+        createHash("sha256").update(archive[f.name]).digest("hex"),
+      );
+    const handoverPdf = await PDFDocument.load(archive["payroll-summary.pdf"]),
+      handoverText = handoverPdf
+        .getPages()
+        .map((page) => pageText(handoverPdf, page))
+        .join("\n");
+    assert.match(handoverText, /Contabil CO iulie/);
+    assert.match(handoverText, /2026-07-02, 2026-07-03/);
+    assert.match(handoverText, locale === "ro" ? /231,50/ : /231\.50/);
+    assert.match(handoverText, /RO-2026-monthly-v6/);
+    await sample(`annual-handover-${locale}`, archive["payroll-summary.pdf"]);
+    const bytes = await generateApprovedPayrollPdf(
+        { ...p.run, organisation_id: p.organisation_id, status: "approved" },
+        {
+          ...item,
+          run_id: p.run.id,
+          organisation_id: p.organisation_id,
+          source: {
+            company: p.company,
+            employee: {
+              name: item.employee_name,
+              email: "synthetic@example.test",
+              job: item.job_title,
+              department: item.department,
+              workplace: "Office",
+              start: "2026-01-01",
+            },
+          },
+        },
+        locale,
+        "HRConnector",
+      ),
+      pdf = await PDFDocument.load(bytes),
+      text = pdf
+        .getPages()
+        .map((page) => pageText(pdf, page))
+        .join("\n");
+    await sample(`annual-payslip-${locale}`, bytes);
+    assert.equal(pdf.getPageCount(), 1);
+    assert.match(text, /Contabil CO iulie/);
+    assert.match(text, /RO-2026-monthly-v6/);
+    assert.match(text, locale === "ro" ? /231,50/ : /231\.50/);
+    await sample(`annual-payslip-${locale}`, bytes);
+  }
+});
+
+test("annual handover rejects missing components, duplicate dates and incompatible saved versions", () => {
+  const p = annualFixture();
+  for (const mutate of [
+    (q) => (q.format_version = "HRConnector-accountant-v3"),
+    (q) => delete q.items[0].input.annualLeave,
+    (q) => delete q.items[0].result.annualLeave,
+    (q) => q.items[0].input.annualLeave.requests[0].dates.push("2026-07-03"),
+    (q) => (q.items[0].input.annualLeave.requests[0].dates[0] = "2026-07-04"),
+    (q) =>
+      (q.items[0].input.annualLeave.requests[0].rateReference = " untrimmed "),
+    (q) => (q.items[0].result.annualLeave.leaveGross = -1),
+    (q) => (q.items[1].input.annualLeave = q.items[0].input.annualLeave),
+    (q) => (q.items[0].result.rules = "RO-2026-monthly-v4"),
+  ]) {
+    const q = structuredClone(p);
+    mutate(q);
+    assert.throws(() => validatePayrollHandover(q));
+  }
+});
+
+test("mixed v6/v5/v4/v3 handover and long annual evidence paginate without losing saved facts", async () => {
+  const p = annualFixture("en"),
+    item = p.items[0];
+  for (const [n, withSettlement] of [
+    [8, false],
+    [10, true],
+  ]) {
+    const previous = structuredClone(fixture("en").items[0]);
+    previous.id = `c1000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+    previous.employee_id = `c1000000-0000-4000-8000-${String(n + 1).padStart(12, "0")}`;
+    if (withSettlement)
+      previous.input = payrollEntrySchema.parse({
+        ...previous.input,
+        settlement: {
+          days: 2,
+          dailyGross: 110.25,
+          balanceReference: "Final balance",
+          rateReference: "Final rate",
+          otherGross: 0,
+          otherReference: "",
+          confirmed: "on",
+        },
+      });
+    previous.result = calculatePayrollEntry(previous.input);
+    p.items.push(previous);
+  }
+  const dates = Array.from(
+    { length: 22 },
+    (_, i) => `2026-07-${String(i + 1).padStart(2, "0")}`,
+  ).filter((d) => ![0, 6].includes(new Date(`${d}T12:00:00Z`).getUTCDay()));
+  item.input = payrollWithAnnualSchema.parse({
+    ...item.input,
+    annualLeave: {
+      confirmed: "on",
+      requests: dates.map((date, i) => ({
+        id: `d1000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`,
+        dates: [date],
+        dailyGross: 110.25,
+        rateReference:
+          `REF-${i + 1}-` +
+          "Approved historical permanent components ".repeat(2),
+      })),
+    },
+  });
+  item.result = calculatePayrollWithLeave(item.input);
+  const valid = validatePayrollHandover(p),
+    archive = unzipSync(
+      await buildPayrollHandoverArchive(valid, "HRConnector"),
+    );
+  const pdf = await PDFDocument.load(archive["payroll-summary.pdf"]),
+    text = pdf
+      .getPages()
+      .map((page) => pageText(pdf, page))
+      .join("\n");
+  assert.ok(pdf.getPageCount() > 4);
+  for (const request of item.input.annualLeave.requests) {
+    assert.ok(text.includes(request.id));
+    assert.ok(text.includes(request.dates[0]));
+    assert.ok(
+      text
+        .replace(/\s+/g, " ")
+        .includes(request.rateReference.replace(/\s+/g, " ")),
+    );
+  }
+  for (const rule of ["v6", "v5", "v4", "v3"])
+    assert.ok(text.includes(`RO-2026-monthly-${rule}`));
+  await sample("annual-handover-long", archive["payroll-summary.pdf"]);
+  const bytes = await generateApprovedPayrollPdf(
+      { ...p.run, organisation_id: p.organisation_id, status: "approved" },
+      {
+        ...item,
+        run_id: p.run.id,
+        organisation_id: p.organisation_id,
+        source: {
+          company: p.company,
+          employee: {
+            name: item.employee_name,
+            email: "synthetic@example.test",
+            job: item.job_title,
+            department: item.department,
+            workplace: "Office",
+            start: "2026-01-01",
+          },
+        },
+      },
+      "en",
+      "HRConnector",
+    ),
+    slip = await PDFDocument.load(bytes),
+    slipText = slip
+      .getPages()
+      .map((page) => pageText(slip, page))
+      .join("\n");
+  assert.ok(slip.getPageCount() > 1);
+  for (const request of item.input.annualLeave.requests)
+    assert.match(slipText, new RegExp(request.rateReference.slice(0, 7)));
+  assert.match(slipText, /electronically generated|Electronically generated/);
+  await sample("annual-payslip-long", bytes);
+});
 
 test("v5 mixed exports keep separate saved compensation, rate evidence and earned basic without recalculation", async () => {
   for (const locale of ["ro", "en"]) {

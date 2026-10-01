@@ -106,6 +106,16 @@ export type PayrollInput = z.infer<typeof payrollSchema> & {
   deductionEmployer?: "this" | "other";
   deductionReference?: string;
   settlement?: PayrollSettlement;
+  annualLeave?: PayrollAnnualLeave;
+};
+export type PayrollAnnualLeave = {
+  requests: {
+    id: string;
+    dates: string[];
+    dailyGross: number;
+    rateReference: string;
+  }[];
+  confirmed: "on";
 };
 export type PayrollSettlement = {
   days: number;
@@ -142,6 +152,7 @@ export type PayrollResult = {
   cam: number;
   employerCost: number;
   settlement?: { unusedLeaveGross: number; otherGross: number };
+  annualLeave?: { workedBasic: number; leaveGross: number };
 };
 // All operands are bounded safe integers. Round only at the defined fiscal step.
 // Title IV: exact half rounds down; social contributions: exact half rounds up.

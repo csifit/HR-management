@@ -9,11 +9,16 @@ import {
   PartialPayrollReliefReview,
   type PayrollPeriodContext,
 } from "@/lib/payroll-period";
+import { payrollSettlementFromForm } from "@/lib/payroll-settlement";
 import {
-  calculatePayrollEntry,
-  payrollEntrySchema,
-  payrollSettlementFromForm,
-} from "@/lib/payroll-settlement";
+  calculatePayrollWithLeave,
+  payrollWithAnnualSchema,
+  payrollAnnualFromForm,
+} from "@/lib/payroll-annual-leave";
+import {
+  payrollAnnualDictionary,
+  payrollAnnualLines,
+} from "@/lib/payroll-annual-i18n";
 import {
   payrollSettlementDictionary,
   payrollSettlementLines,
@@ -62,21 +67,23 @@ export function PayrollForm({
     rd = payrollRunDictionary(locale),
     periodD = payrollPeriodDictionary(locale),
     sd = payrollSettlementDictionary(locale),
+    ad = payrollAnnualDictionary(locale),
     wd = workflowDictionary(locale);
   const value = (
-    key: Exclude<keyof PayrollInput, "period" | "settlement">,
+    key: Exclude<keyof PayrollInput, "period" | "settlement" | "annualLeave">,
     fallback: string | number = "",
   ) => state.values?.[key] ?? savedInput?.[key] ?? fallback;
   function calculate() {
     if (!form.current?.reportValidity()) return;
     try {
       const values = Object.fromEntries(new FormData(form.current));
-      const input = payrollEntrySchema.parse({
+      const input = payrollWithAnnualSchema.parse({
         ...values,
         period: periodContext.period,
         settlement: payrollSettlementFromForm(values),
+        annualLeave: payrollAnnualFromForm(values),
       });
-      setResult(calculatePayrollEntry(input));
+      setResult(calculatePayrollWithLeave(input));
       setPreviewInput(input);
       setError("");
     } catch (error) {
@@ -131,6 +138,13 @@ export function PayrollForm({
         type="hidden"
         value={JSON.stringify(periodContext.period)}
       />
+      {periodContext.annual_leave && (
+        <input
+          name="annualRequests"
+          type="hidden"
+          value={JSON.stringify(periodContext.annual_leave.requests)}
+        />
+      )}
       {(state.error || error) && (
         <p className="notice error" role="alert">
           {error || state.error}
@@ -275,6 +289,60 @@ export function PayrollForm({
             </label>
           </div>
         </section>
+        {periodContext.annual_leave && (
+          <section className="workflow-section">
+            <h3>{ad.title}</h3>
+            <p className="time-help">{ad.help}</p>
+            {periodContext.annual_leave.requests.map((r, i) => {
+              const saved = savedInput?.annualLeave?.requests.find(
+                (s) => s.id === r.id,
+              );
+              return (
+                <div className="workflow-section" key={r.id}>
+                  <p className="time-help">
+                    {ad.days}: {r.dates.length} · {r.dates.join(", ")}
+                  </p>
+                  <div className="form-grid">
+                    <label className="field">
+                      <span>{ad.dailyGross}</span>
+                      <input
+                        name={`annualRate${i}`}
+                        type="number"
+                        min="0.01"
+                        max="1000000"
+                        step="0.01"
+                        required
+                        defaultValue={
+                          state.values?.[`annualRate${i}`] ??
+                          saved?.dailyGross ??
+                          ""
+                        }
+                      />
+                    </label>
+                    <label className="field">
+                      <span>{ad.rateReference}</span>
+                      <input
+                        name={`annualReference${i}`}
+                        minLength={3}
+                        maxLength={120}
+                        required
+                        defaultValue={
+                          state.values?.[`annualReference${i}`] ??
+                          saved?.rateReference ??
+                          ""
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+              );
+            })}
+            <label className="benefit-confirm">
+              <input name="annualConfirmed" type="checkbox" required />
+              {ad.confirm}
+            </label>
+          </section>
+        )}
         {periodContext.settlement_allowed && (
           <section className="workflow-section">
             <h3>{sd.title}</h3>
@@ -340,8 +408,12 @@ export function PayrollForm({
         <details className="workflow-details">
           <summary>{wd.guidance}</summary>
           <div className="workflow-guidance">
-            <p>{periodD.help}</p>
-            <p>{includeSettlement ? sd.help : periodD.scope}</p>
+            <p>{periodContext.annual_leave ? ad.help : periodD.help}</p>
+            {includeSettlement ? (
+              <p>{sd.help}</p>
+            ) : (
+              !periodContext.annual_leave && <p>{periodD.scope}</p>
+            )}
             <p>{periodD.deductionHelp}</p>
             <p>{rd.hoursScope}</p>
             <p>{d.floorHelp}</p>
@@ -361,7 +433,11 @@ export function PayrollForm({
               name="period_reviewed"
               required
             />
-            {includeSettlement ? sd.calendarConfirm : periodD.calendarConfirm}
+            {periodContext.annual_leave
+              ? ad.calendarConfirm
+              : includeSettlement
+                ? sd.calendarConfirm
+                : periodD.calendarConfirm}
           </label>
           <label className="benefit-confirm">
             <input
@@ -370,7 +446,11 @@ export function PayrollForm({
               name="standard"
               required
             />
-            {includeSettlement ? sd.standard : periodD.standard}
+            {periodContext.annual_leave
+              ? ad.standard
+              : includeSettlement
+                ? sd.standard
+                : periodD.standard}
           </label>
         </section>
         <button type="button" className="button secondary" onClick={calculate}>
@@ -386,6 +466,7 @@ export function PayrollForm({
                 {[
                   ...payrollPeriodLines(previewInput, locale, result),
                   ...payrollSettlementLines(previewInput, result, locale),
+                  ...payrollAnnualLines(previewInput, result, locale),
                 ].map((line, index) => (
                   <p key={index}>{line}</p>
                 ))}
