@@ -3,6 +3,10 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import { calculatePayroll } from "../src/lib/payroll.ts";
+import {
+  calculatePayrollAdjusted,
+  payrollWithUnpaidSchema,
+} from "../src/lib/payroll-unpaid.ts";
 import { calculatePayrollRun } from "../src/lib/payroll-period.ts";
 import {
   calculatePayrollWithLeave,
@@ -723,6 +727,417 @@ test("v5 malformed facts, components and version are rejected without export his
     });
 });
 
+async function unpaidRequest(from = "2026-01-05", to = "2026-01-06") {
+  const type = await scalar(
+    "select id from leave_types where organisation_id=$1 and category='unpaid'",
+    [org],
+  );
+  const id = await as(users.hr, () =>
+    scalar("select request_leave($1,$2,$3,$4,$5)", [
+      org,
+      employee,
+      type,
+      from,
+      to,
+    ]),
+  );
+  await as(users.owner, () =>
+    db.query("select decide_leave($1,$2,1,'approved','Reviewed')", [org, id]),
+  );
+  return id;
+}
+async function noShow(day = "2026-01-07", absence = "other") {
+  const hours = await scalar(
+    "select working_hours from employment_contracts where id=$1",
+    [contract],
+  );
+  await as(users.hr, () =>
+    db.query("select save_attendance($1,$2,$3,$4,0,$5,null)", [
+      org,
+      employee,
+      day,
+      hours,
+      absence,
+    ]),
+  );
+}
+async function unpaidInput(patch = {}) {
+  const c = await context();
+  return payrollWithUnpaidSchema.parse({
+    ...(await input()),
+    unpaid: {
+      ...c.unpaid,
+      suspendedDates: [],
+      reviewReference: "HR/accountant unpaid review",
+      suspensionReference: "",
+      confirmed: "on",
+    },
+    ...patch,
+  });
+}
+test("approved unpaid dates and HR-reviewed zero attendance derive exact v7 payroll without overlap", async () => {
+  await as(users.hr, () =>
+    db.query("select save_attendance($1,$2,'2026-01-05',8,0,'none',null)", [
+      org,
+      employee,
+    ]),
+  );
+  await unpaidRequest();
+  await noShow();
+  const c = await context();
+  assert.deepEqual(c.unpaid.requests[0].dates, ["2026-01-05", "2026-01-06"]);
+  assert.deepEqual(c.unpaid.absences, ["2026-01-07"]);
+  const value = await unpaidInput(),
+    run = await create(),
+    id = await save(run, value);
+  const r = await scalar("select result from payroll_run_items where id=$1", [
+    id,
+  ]);
+  assert.deepEqual(r, calculatePayrollAdjusted(value));
+  assert.equal(r.cashGross, 8636.36);
+  assert.deepEqual(r.unpaid, {
+    workedBasic: 8636.36,
+    unpaidBasic: 1363.64,
+    activeWorkingDays: 22,
+  });
+  await approve(run);
+  const p = await handover(run);
+  assert.equal(p.format_version, "HRConnector-accountant-v5");
+  assert.deepEqual(p.items[0].input, value);
+  assert.deepEqual(p.items[0].result, r);
+});
+test("part-time unpaid suspension affects only floor days and does not change contract status", async () => {
+  await db.query(
+    "update employment_contracts set gross_salary=2025,working_hours=4 where id=$1",
+    [contract],
+  );
+  await unpaidRequest();
+  await noShow();
+  const value = await unpaidInput(),
+    run = await create();
+  const unsuspended = await calculation(value);
+  assert.deepEqual(unsuspended, calculatePayrollAdjusted(value));
+  assert.equal(unsuspended.contributionFloor, 3750);
+  const reviewed = {
+    ...value,
+    unpaid: {
+      ...value.unpaid,
+      suspendedDates: ["2026-01-05", "2026-01-06"],
+      suspensionReference: "Formal suspension record",
+    },
+  };
+  const suspended = await calculation(reviewed);
+  assert.deepEqual(suspended, calculatePayrollAdjusted(reviewed));
+  assert.equal(suspended.contributionFloor, 3409);
+  assert.equal(suspended.cashGross, unsuspended.cashGross);
+  await save(run, reviewed);
+  await approve(run);
+  assert.equal(
+    await scalar("select status from employment_contracts where id=$1", [
+      contract,
+    ]),
+    "active",
+  );
+});
+
+test("unpaid requests clip cross-month dates and holidays; overlapping source dates reject", async () => {
+  await as(users.hr, () =>
+    db.query(
+      "select save_calendar_day($1,'2026-01-06',false,'Synthetic holiday')",
+      [org],
+    ),
+  );
+  const first = await unpaidRequest("2026-01-05", "2026-01-07"),
+    second = await unpaidRequest("2026-01-30", "2026-02-03");
+  const c = await context();
+  assert.equal(c.period.monthWorkingDays, 21);
+  assert.deepEqual(
+    c.unpaid.requests.map((r) => r.id),
+    [first, second].sort(),
+  );
+  assert.deepEqual(c.unpaid.requests.find((r) => r.id === first).dates, [
+    "2026-01-05",
+    "2026-01-07",
+  ]);
+  assert.deepEqual(c.unpaid.requests.find((r) => r.id === second).dates, [
+    "2026-01-30",
+  ]);
+  const value = await unpaidInput(),
+    run = await create();
+  await save(run, value);
+  await approve(run);
+  assert.deepEqual(
+    (await handover(run)).items[0].result,
+    calculatePayrollAdjusted(value),
+  );
+  await db.query(
+    "update leave_requests set work_dates=array[date '2026-01-05'] where id=$1",
+    [second],
+  );
+  await assert.rejects(() => context(), { code: "P0010" });
+});
+test("v7 supports annual leave and reviewed settlement while vouchers/advances and partial floors match JS", async () => {
+  await annualRequest();
+  await unpaidRequest("2026-01-07", "2026-01-08");
+  await noShow("2026-01-09", "none");
+  await terminate("2026-01-16");
+  const a = (await annualInput()).annualLeave,
+    value = await unpaidInput({
+      annualLeave: a,
+      settlement,
+      meals: 200.15,
+      mealsReference: "Actual issuance",
+      advance: 100.5,
+      advanceReference: "Paid advance",
+    }),
+    run = await create();
+  await save(run, value);
+  await approve(run);
+  const p = await handover(run);
+  assert.deepEqual(p.items[0].result, calculatePayrollAdjusted(value));
+  assert.equal(p.items[0].result.unpaid.activeWorkingDays, 12);
+  assert.equal(
+    p.items[0].result.annualLeave.workedBasic,
+    p.items[0].result.unpaid.workedBasic,
+  );
+  for (const patch of [
+    { basic: 2025, hours: 4 },
+    {
+      basic: 2025,
+      hours: 4,
+      floorException: "student",
+      evidence: "Valid certificate",
+    },
+    { primary: "no", deductionEmployer: "other", meals: 0, mealsReference: "" },
+  ]) {
+    const v = payrollWithUnpaidSchema.parse({ ...value, ...patch });
+    assert.deepEqual(await calculation(v), calculatePayrollAdjusted(v));
+  }
+});
+test("omitted/forged unpaid records, missing classification, suspension evidence and pending decisions reject", async () => {
+  await unpaidRequest();
+  await noShow();
+  const value = await unpaidInput(),
+    run = await create();
+  const omitted = { ...value };
+  delete omitted.unpaid;
+  await assert.rejects(() => save(run, omitted), { code: "P0010" });
+  for (const patch of [
+    { requests: [{ ...value.unpaid.requests[0], id: users.other }] },
+    { absences: ["2026-01-08"] },
+    { reviewReference: "" },
+    { confirmed: "" },
+    { suspendedDates: ["2026-01-07"] },
+    { suspendedDates: ["2026-01-08"], suspensionReference: "Record" },
+    {
+      suspendedDates: ["2026-01-05", "2026-01-05"],
+      suspensionReference: "Record",
+    },
+  ])
+    await assert.rejects(() =>
+      save(run, { ...value, unpaid: { ...value.unpaid, ...patch } }),
+    );
+  const type = await scalar(
+    "select id from leave_types where organisation_id=$1 and category='unpaid'",
+    [org],
+  );
+  await as(users.hr, () =>
+    db.query("select request_leave($1,$2,$3,'2026-01-08','2026-01-08')", [
+      org,
+      employee,
+      type,
+    ]),
+  );
+  await assert.rejects(() => context(), { code: "P0010" });
+});
+test("unpaid request and attendance changes require review; cancellation removes the adjustment", async () => {
+  await unpaidRequest();
+  await noShow();
+  const value = await unpaidInput(),
+    run = await create();
+  await save(run, value);
+  await db.query(
+    "update attendance set version=version+1 where employee_id=$1",
+    [employee],
+  );
+  await assert.rejects(() => approve(run), { code: "P0010" });
+  await save(run, await unpaidInput());
+  await db.query(
+    "update leave_requests set version=version+1 where employee_id=$1",
+    [employee],
+  );
+  await assert.rejects(() => approve(run), { code: "P0010" });
+  await save(run, await unpaidInput());
+  await db.query(
+    "update leave_requests set status='cancelled',version=version+1 where employee_id=$1",
+    [employee],
+  );
+  await db.query(
+    "update attendance set worked_hours=planned_hours,absence='none',version=version+1 where employee_id=$1",
+    [employee],
+  );
+  await assert.rejects(() => approve(run), { code: "P0010" });
+  await save(run, await input());
+  await approve(run);
+  assert.equal(
+    (await handover(run)).items[0].result.rules,
+    "RO-2026-monthly-v4",
+  );
+});
+test("unpaid dates obey calendar/employment bounds and unsupported partial, medical and paid-special cases fail", async () => {
+  await unpaidRequest();
+  const value = await unpaidInput(),
+    run = await create();
+  await save(run, value);
+  await isolated(async () => {
+    await db.query(
+      "insert into work_calendar_days(organisation_id,day,is_working,label) values($1,'2026-01-05',false,'Changed')",
+      [org],
+    );
+    await assert.rejects(() => approve(run), { code: "P0010" });
+  });
+  await isolated(async () => {
+    await start("2026-01-06");
+    await assert.rejects(() => context(), { code: "P0010" });
+  });
+  for (const [worked, absence] of [
+    [4, "none"],
+    [0, "medical"],
+  ])
+    await isolated(async () => {
+      await db.query(
+        "insert into attendance(organisation_id,employee_id,day,planned_hours,worked_hours,absence,updated_by) values($1,$2,'2026-01-07',8,$3,$4,$5)",
+        [org, employee, worked, absence, users.hr],
+      );
+      await assert.rejects(() => context(), { code: "P0010" });
+    });
+  const special = await scalar(
+    "insert into leave_types(organisation_id,name,category,deducts_balance) values($1,'Paid special','other',false) returning id",
+    [org],
+  );
+  const leave = await as(users.hr, () =>
+    scalar("select request_leave($1,$2,$3,'2026-01-07','2026-01-07')", [
+      org,
+      employee,
+      special,
+    ]),
+  );
+  await as(users.owner, () =>
+    db.query("select decide_leave($1,$2,1,'approved','Special paid leave')", [
+      org,
+      leave,
+    ]),
+  );
+  await assert.rejects(() => context(), { code: "P0010" });
+});
+test("all-month unpaid suspension has zero floor, while relief and zero-cash active cases remain blocked", async () => {
+  await unpaidRequest("2026-01-01", "2026-01-31");
+  const value = await unpaidInput(),
+    dates = value.unpaid.requests.flatMap((r) => r.dates).sort();
+  const v = {
+    ...value,
+    unpaid: {
+      ...value.unpaid,
+      suspendedDates: dates,
+      suspensionReference: "Month suspension",
+    },
+  };
+  assert.deepEqual(await calculation(v), calculatePayrollAdjusted(v));
+  assert.equal((await calculation(v)).payable, 0);
+  await save(await create(), v);
+  await isolated(() =>
+    assert.rejects(() => calculation(value), { code: "P0015" }),
+  );
+  await isolated(() =>
+    assert.rejects(() => calculation({ ...v, basic: 4050 }), { code: "P0015" }),
+  );
+});
+test("v7 RPCs retain HR/tenant/MFA/status/version checks and private helpers are not callable", async () => {
+  await unpaidRequest();
+  const value = await unpaidInput(),
+    run = await create();
+  for (const actor of [
+    users.other,
+    users.employee,
+    users.manager,
+    users.platform,
+  ]) {
+    await assert.rejects(() => context({ actor }), { code: "42501" });
+    await assert.rejects(() => save(run, value, { actor }), { code: "42501" });
+  }
+  await assert.rejects(() => save(run, value, { v: 99 }), { code: "P0006" });
+  await assert.rejects(
+    () =>
+      as(users.hr, () =>
+        db.query("select private.calculate_payroll_v7($1::jsonb)", [
+          JSON.stringify(value),
+        ]),
+      ),
+    { code: "42501" },
+  );
+  await db.query(
+    "insert into auth.mfa_factors(user_id,status) values($1,'verified')",
+    [users.hr],
+  );
+  await assert.rejects(() => save(run, value));
+  await db.exec(
+    `select set_config('request.jwt.claims','{"aal":"aal2"}',false)`,
+  );
+  await save(run, value);
+  await db.query(
+    "update organisations set status='suspended',status_reason='Synthetic' where id=$1",
+    [org],
+  );
+  await assert.rejects(() => save(run, value));
+});
+test("unpaid corrections retain original history and malformed saved components never record an export", async () => {
+  await unpaidRequest();
+  const value = await unpaidInput(),
+    run = await create();
+  await save(run, value);
+  await approve(run);
+  const original = (await handover(run)).items[0];
+  const correction = await create(run),
+    revised = {
+      ...value,
+      unpaid: {
+        ...value.unpaid,
+        suspendedDates: ["2026-01-05"],
+        suspensionReference: "New reviewed evidence",
+      },
+    };
+  await save(correction, revised);
+  await approve(correction);
+  assert.deepEqual((await handover(run, true)).items[0], original);
+  assert.deepEqual(
+    (await handover(correction)).items[0].result,
+    calculatePayrollAdjusted(revised),
+  );
+  for (const [column, path, invalid] of [
+    ["input", "{unpaid,requests,0,id}", users.other],
+    ["input", "{unpaid,absences}", ["2026-01-07"]],
+    ["input", "{unpaid,suspendedDates}", ["2026-01-08"]],
+    ["result", "{unpaid,workedBasic}", -1],
+    ["result", "{unpaid,activeWorkingDays}", 999],
+    ["result", "{unpaid}", null],
+    ["result", "{rules}", "RO-2026-monthly-v4"],
+  ])
+    await isolated(async () => {
+      await db.query(
+        `update payroll_run_items set ${column}=jsonb_set(${column},$1,$2::jsonb) where run_id=$3`,
+        [path, JSON.stringify(invalid), run],
+      );
+      const before = await scalar(
+        "select count(*)::int from payroll_handover_exports",
+      );
+      await assert.rejects(() => handover(run, true), { code: "P0010" });
+      assert.equal(
+        await scalar("select count(*)::int from payroll_handover_exports"),
+        before,
+      );
+    });
+});
+
 before(async () => {
   db = new PGlite();
   await db.exec(`create role anon;create role authenticated;create schema auth;grant usage on schema auth to authenticated,anon;
@@ -1029,7 +1444,7 @@ test("unsupported status, ambiguous contracts, empty periods and nonstandard sch
     });
 });
 
-test("manual hours and approved leave inside period reject save, positive work outside also rejects", async () => {
+test("manual adjustments need unpaid review or remain unsupported; medical leave and outside work reject", async () => {
   await start("2026-01-16");
   for (const [day, planned, worked, absence] of [
     ["2026-01-16", 8, 0, "none"],
@@ -1043,7 +1458,12 @@ test("manual hours and approved leave inside period reject save, positive work o
         "insert into attendance(organisation_id,employee_id,day,planned_hours,worked_hours,absence,updated_by) values($1,$2,$3,$4,$5,$6,$7)",
         [org, employee, day, planned, worked, absence, users.hr],
       );
-      await assert.rejects(() => context(), { code: "P0010" });
+      if (worked === 0) {
+        assert.deepEqual((await context()).unpaid.absences, [day]);
+        await assert.rejects(async () => save(await create(), await input()), {
+          code: "P0010",
+        });
+      } else await assert.rejects(() => context(), { code: "P0010" });
     });
   await as(users.hr, () =>
     db.query("select save_attendance($1,$2,'2026-01-16',8,8,'none',null)", [

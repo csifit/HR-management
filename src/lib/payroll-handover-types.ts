@@ -3,7 +3,7 @@ import type { Locale } from "./i18n";
 
 export type PayrollMoneyKey = Exclude<
   keyof PayrollResult,
-  "rules" | "month" | "settlement" | "annualLeave"
+  "rules" | "month" | "settlement" | "annualLeave" | "unpaid"
 >;
 export type PayrollHandoverItem = {
   id: string;
@@ -24,7 +24,8 @@ export type PayrollHandoverPayload = {
     | "HRConnector-accountant-v1"
     | "HRConnector-accountant-v2"
     | "HRConnector-accountant-v3"
-    | "HRConnector-accountant-v4";
+    | "HRConnector-accountant-v4"
+    | "HRConnector-accountant-v5";
   run: {
     id: string;
     month: string;

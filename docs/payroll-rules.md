@@ -4,6 +4,8 @@ Rule identifier: `RO-2026-monthly-v3`. Rounding references reviewed on 24 Septem
 
 This document describes the preserved full-month v3 rules. New saves after migration 018 use v4, including normal mid-month starters/leavers. See [partial-month rules and primary sources](payroll-partial-month-rules.md) and [workflow/release checks](payroll-partial-month.md) for the expansion, explicit conventions and the unresolved partial-month minimum-wage relief case. Approved v3 figures are not rewritten.
 
+Later optional inputs dispatch to v5 termination settlements, v6 approved annual leave or v7 unpaid days. Their source checks and saved components extend the historical restrictions below; see [settlements](payroll-termination-settlements.md), [annual leave](payroll-annual-leave.md) and [unpaid leave/absences](payroll-unpaid-absences.md). This document's v3 exclusions do not describe those separately versioned calculations.
+
 ## Supported facts and calculations
 
 With migration 013, payslip generation requires a Monday–Friday recurring schedule throughout the selected month. Other weekday patterns need separate payroll review; adding attendance schedules does not expand the tax calculator's supported contract assumptions.

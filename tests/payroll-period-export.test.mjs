@@ -29,6 +29,10 @@ import { buildPayrollHandoverArchive } from "../src/lib/payroll-handover-archive
 import { generateApprovedPayrollPdf } from "../src/lib/payroll-run-pdf.ts";
 import { generatePayrollHandoverPdf } from "../src/lib/payroll-handover-pdf.ts";
 import {
+  calculatePayrollAdjusted,
+  payrollWithUnpaidSchema,
+} from "../src/lib/payroll-unpaid.ts";
+import {
   calculatePayrollWithLeave,
   payrollWithAnnualSchema,
 } from "../src/lib/payroll-annual-leave.ts";
@@ -134,6 +138,215 @@ function annualFixture(locale = "ro") {
   item.result = calculatePayrollWithLeave(item.input);
   return p;
 }
+
+function unpaidFixture(locale = "ro") {
+  const p = annualFixture(locale),
+    i = p.items[0];
+  p.format_version = "HRConnector-accountant-v5";
+  i.input = payrollWithUnpaidSchema.parse({
+    ...i.input,
+    unpaid: {
+      requests: [
+        {
+          id: "e1000000-0000-4000-8000-000000000001",
+          dates: ["2026-07-06", "2026-07-07"],
+        },
+      ],
+      absences: ["2026-07-08"],
+      suspendedDates: ["2026-07-06", "2026-07-07"],
+      reviewReference: "Reviewed unpaid classification",
+      suspensionReference: "Formal registry evidence",
+      confirmed: "on",
+    },
+  });
+  i.result = calculatePayrollAdjusted(i.input);
+  return p;
+}
+test("v7 RO/EN CSV, manifests and PDF preserve saved unpaid amounts and review/suspension facts", async () => {
+  for (const locale of ["ro", "en"]) {
+    const p = unpaidFixture(locale),
+      i = p.items[0];
+    i.result.unpaid.workedBasic = 1011.99;
+    i.result.annualLeave.workedBasic = 1011.99;
+    i.result.unpaid.unpaidBasic = 333.33;
+    i.result.cashGross = 1242.74;
+    const valid = validatePayrollHandover(p),
+      rows = csvRows(payrollHandoverCsvs(valid)["payroll.csv"]);
+    assert.equal(rows[0].length, rows[1].length);
+    assert.equal(rows[0].length, rows[2].length);
+    assert.equal(rows[1][16], locale === "ro" ? "1011,99" : "1011.99");
+    assert.deepEqual(
+      rows[1].slice(30, 35),
+      locale === "ro"
+        ? ["3", "2", "14", "1011,99", "333,33"]
+        : ["3", "2", "14", "1011.99", "333.33"],
+    );
+    assert.deepEqual(JSON.parse(rows[1][37]), i.input.unpaid);
+    assert.deepEqual(rows[2].slice(30, 38), Array(8).fill(""));
+    const archive = unzipSync(
+        await buildPayrollHandoverArchive(valid, "HRConnector"),
+      ),
+      manifest = JSON.parse(strFromU8(archive["manifest.json"]));
+    assert.deepEqual(manifest.employees[0].unpaid, i.input.unpaid);
+    assert.deepEqual(manifest.employees[0].unpaid_amounts, i.result.unpaid);
+    assert.match(strFromU8(archive["README.txt"]), /Format v5/);
+    for (const f of manifest.files)
+      assert.equal(
+        f.sha256,
+        createHash("sha256").update(archive[f.name]).digest("hex"),
+      );
+    const pdf = await PDFDocument.load(archive["payroll-summary.pdf"]),
+      text = pdf
+        .getPages()
+        .map((page) => pageText(pdf, page))
+        .join("\n");
+    assert.match(text.replace(/\s+/g, " "), /Formal registry evidence/);
+    assert.match(text.replace(/\s+/g, " "), /Reviewed unpaid classification/);
+    assert.match(text, /2026-07-06, 2026-07-07/);
+    assert.match(text, locale === "ro" ? /333,33/ : /333\.33/);
+    assert.match(text, /RO-2026-monthly-v7/);
+    await sample(`unpaid-handover-${locale}`, archive["payroll-summary.pdf"]);
+    const bytes = await generateApprovedPayrollPdf(
+        { ...p.run, organisation_id: p.organisation_id, status: "approved" },
+        {
+          ...i,
+          run_id: p.run.id,
+          organisation_id: p.organisation_id,
+          source: {
+            company: p.company,
+            employee: {
+              name: i.employee_name,
+              email: "synthetic@example.test",
+              job: i.job_title,
+              department: i.department,
+              workplace: "Office",
+              start: "2026-01-01",
+            },
+          },
+        },
+        locale,
+        "HRConnector",
+      ),
+      slip = await PDFDocument.load(bytes),
+      texts = slip.getPages().map((page) => pageText(slip, page));
+    assert.ok(slip.getPageCount() <= 2);
+    assert.match(texts.join("\n"), /Formal registry evidence/);
+    assert.match(texts.join("\n"), locale === "ro" ? /333,33/ : /333\.33/);
+    assert.match(texts.at(-1), /RO-2026-monthly-v7|CAM|tax|Cost|cost/);
+    await sample(`unpaid-payslip-${locale}`, bytes);
+  }
+});
+test("unpaid handover rejects incompatible rules, date/suspension facts and inconsistent saved components", () => {
+  const p = unpaidFixture();
+  for (const mutate of [
+    (q) => (q.format_version = "HRConnector-accountant-v4"),
+    (q) => delete q.items[0].input.unpaid,
+    (q) => delete q.items[0].result.unpaid,
+    (q) => (q.items[0].input.unpaid.absences = ["2026-07-06"]),
+    (q) => (q.items[0].input.unpaid.suspendedDates = ["2026-07-03"]),
+    (q) => (q.items[0].input.unpaid.suspensionReference = ""),
+    (q) => (q.items[0].input.unpaid.reviewReference = " untrimmed "),
+    (q) => (q.items[0].input.unpaid.absences = ["2026-07-04"]),
+    (q) => (q.items[0].result.unpaid.activeWorkingDays = 16),
+    (q) => (q.items[0].result.unpaid.workedBasic += 1),
+    (q) => (q.items[0].result.unpaid.unpaidBasic = -1),
+    (q) => (q.items[1].input.unpaid = q.items[0].input.unpaid),
+  ]) {
+    const q = structuredClone(p);
+    mutate(q);
+    assert.throws(() => validatePayrollHandover(q));
+  }
+});
+test("mixed v3-v7 exports and long unpaid evidence retain all dates and saved rule versions", async () => {
+  const p = unpaidFixture("en"),
+    i = p.items[0];
+  i.input.unpaid.reviewReference =
+    "Reviewed lawful unpaid classification and evidence ".repeat(2).trim();
+  i.input.unpaid.suspensionReference =
+    "Formal suspension registry evidence and HR approval ".repeat(2).trim();
+  for (const [n, kind] of [
+    [8, "annual"],
+    [10, "settlement"],
+    [12, "period"],
+  ]) {
+    const source =
+        kind === "annual"
+          ? annualFixture("en").items[0]
+          : fixture("en").items[0],
+      q = structuredClone(source);
+    q.id = `c1000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
+    q.employee_id = `c1000000-0000-4000-8000-${String(n + 1).padStart(12, "0")}`;
+    if (kind === "settlement") {
+      q.input = payrollEntrySchema.parse({
+        ...q.input,
+        settlement: {
+          days: 2,
+          dailyGross: 110.25,
+          balanceReference: "Final balance",
+          rateReference: "Approved final rate",
+          otherGross: 0,
+          otherReference: "",
+          confirmed: "on",
+        },
+      });
+      q.result = calculatePayrollEntry(q.input);
+    }
+    p.items.push(q);
+  }
+  const archive = unzipSync(
+      await buildPayrollHandoverArchive(
+        validatePayrollHandover(p),
+        "HRConnector",
+      ),
+    ),
+    pdf = await PDFDocument.load(archive["payroll-summary.pdf"]),
+    text = pdf
+      .getPages()
+      .map((page) => pageText(pdf, page))
+      .join("\n");
+  for (const rule of ["v3", "v4", "v5", "v6", "v7"])
+    assert.ok(text.includes(`RO-2026-monthly-${rule}`));
+  assert.ok(text.replace(/\s+/g, " ").includes(i.input.unpaid.reviewReference));
+  assert.ok(
+    text.replace(/\s+/g, " ").includes(i.input.unpaid.suspensionReference),
+  );
+  assert.ok(text.includes("2026-07-08"));
+  assert.ok(text.includes(i.input.unpaid.requests[0].id));
+  await sample("unpaid-handover-mixed", archive["payroll-summary.pdf"]);
+  const bytes = await generateApprovedPayrollPdf(
+    { ...p.run, organisation_id: p.organisation_id, status: "approved" },
+    {
+      ...i,
+      run_id: p.run.id,
+      organisation_id: p.organisation_id,
+      source: {
+        company: p.company,
+        employee: {
+          name: i.employee_name,
+          email: "synthetic@example.test",
+          job: i.job_title,
+          department: i.department,
+          workplace: "Office",
+          start: "2026-01-01",
+        },
+      },
+    },
+    "en",
+    "HRConnector",
+  );
+  const slip = await PDFDocument.load(bytes),
+    pages = slip.getPages().map((page) => pageText(slip, page)),
+    full = pages.join("\n").replace(/\s+/g, " ");
+  assert.ok(full.includes(i.input.unpaid.reviewReference));
+  assert.ok(full.includes(i.input.unpaid.suspensionReference));
+  for (const date of [
+    ...i.input.unpaid.requests.flatMap((r) => r.dates),
+    ...i.input.unpaid.absences,
+  ])
+    assert.ok(full.includes(date));
+  assert.match(pages.at(-1), /RO-2026-monthly-v7|CAM|tax|Cost|cost/);
+  await sample("unpaid-payslip-long", bytes);
+});
 
 test("v6 RO/EN exports preserve saved annual components, request evidence and hashes without recalculating", async () => {
   for (const locale of ["ro", "en"]) {

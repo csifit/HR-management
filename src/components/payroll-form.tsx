@@ -10,11 +10,17 @@ import {
   type PayrollPeriodContext,
 } from "@/lib/payroll-period";
 import { payrollSettlementFromForm } from "@/lib/payroll-settlement";
+import { payrollAnnualFromForm } from "@/lib/payroll-annual-leave";
 import {
-  calculatePayrollWithLeave,
-  payrollWithAnnualSchema,
-  payrollAnnualFromForm,
-} from "@/lib/payroll-annual-leave";
+  calculatePayrollAdjusted,
+  payrollWithUnpaidSchema,
+  payrollUnpaidFromForm,
+  UnpaidPayrollReview,
+} from "@/lib/payroll-unpaid";
+import {
+  payrollUnpaidDictionary,
+  payrollUnpaidLines,
+} from "@/lib/payroll-unpaid-i18n";
 import {
   payrollAnnualDictionary,
   payrollAnnualLines,
@@ -55,6 +61,14 @@ export function PayrollForm({
   savedInput?: PayrollInput;
   periodContext: PayrollPeriodContext;
 }) {
+  const unpaidDates = [
+    ...(periodContext.unpaid?.requests.flatMap((r) => r.dates) ?? []),
+    ...(periodContext.unpaid?.absences ?? []),
+  ].sort();
+  const [suspendedCount, setSuspendedCount] = useState(
+    unpaidDates.filter((d) => savedInput?.unpaid?.suspendedDates.includes(d))
+      .length,
+  );
   const [state, submit, pending] = useActionState(savePayrollEntry, {}),
     [result, setResult] = useState<PayrollResult | null>(null),
     [previewInput, setPreviewInput] = useState<PayrollInput | null>(null),
@@ -68,30 +82,37 @@ export function PayrollForm({
     periodD = payrollPeriodDictionary(locale),
     sd = payrollSettlementDictionary(locale),
     ad = payrollAnnualDictionary(locale),
+    ud = payrollUnpaidDictionary(locale),
     wd = workflowDictionary(locale);
   const value = (
-    key: Exclude<keyof PayrollInput, "period" | "settlement" | "annualLeave">,
+    key: Exclude<
+      keyof PayrollInput,
+      "period" | "settlement" | "annualLeave" | "unpaid"
+    >,
     fallback: string | number = "",
   ) => state.values?.[key] ?? savedInput?.[key] ?? fallback;
   function calculate() {
     if (!form.current?.reportValidity()) return;
     try {
       const values = Object.fromEntries(new FormData(form.current));
-      const input = payrollWithAnnualSchema.parse({
+      const input = payrollWithUnpaidSchema.parse({
         ...values,
         period: periodContext.period,
         settlement: payrollSettlementFromForm(values),
         annualLeave: payrollAnnualFromForm(values),
+        unpaid: payrollUnpaidFromForm(values),
       });
-      setResult(calculatePayrollWithLeave(input));
+      setResult(calculatePayrollAdjusted(input));
       setPreviewInput(input);
       setError("");
     } catch (error) {
       setResult(null);
       setError(
-        error instanceof PartialPayrollReliefReview
-          ? periodD.reliefReview
-          : d.invalid,
+        error instanceof UnpaidPayrollReview
+          ? ud.needsReview
+          : error instanceof PartialPayrollReliefReview
+            ? periodD.reliefReview
+            : d.invalid,
       );
     }
   }
@@ -339,7 +360,87 @@ export function PayrollForm({
             })}
             <label className="benefit-confirm">
               <input name="annualConfirmed" type="checkbox" required />
-              {ad.confirm}
+              {periodContext.unpaid ? ud.annualConfirm : ad.confirm}
+            </label>
+          </section>
+        )}
+        {periodContext.unpaid && (
+          <section className="workflow-section">
+            <input
+              type="hidden"
+              name="unpaidFacts"
+              value={JSON.stringify(periodContext.unpaid)}
+            />
+            <h3>{ud.title}</h3>
+            <p className="time-help">{ud.help}</p>
+            {periodContext.unpaid.requests.map((r) => (
+              <p className="time-help" key={r.id}>
+                {ud.leave}: {r.dates.join(", ")}
+              </p>
+            ))}
+            {!!periodContext.unpaid.absences.length && (
+              <p className="time-help">
+                {ud.absences}: {periodContext.unpaid.absences.join(", ")}
+              </p>
+            )}
+            <fieldset className="workflow-section">
+              <legend>{ud.suspended}</legend>
+              <div className="form-grid">
+                {unpaidDates.map((date, i) => (
+                  <label className="benefit-confirm" key={date}>
+                    <input
+                      type="checkbox"
+                      name={`unpaidSuspended${i}`}
+                      defaultChecked={
+                        !!savedInput?.unpaid?.suspendedDates.includes(date)
+                      }
+                      onChange={() =>
+                        setSuspendedCount(
+                          form.current?.querySelectorAll(
+                            'input[name^="unpaidSuspended"]:checked',
+                          ).length ?? 0,
+                        )
+                      }
+                    />
+                    {date}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <div className="form-grid">
+              <label className="field">
+                <span>{ud.reviewReference}</span>
+                <input
+                  name="unpaidReference"
+                  required
+                  minLength={3}
+                  maxLength={120}
+                  defaultValue={
+                    state.values?.unpaidReference ??
+                    savedInput?.unpaid?.reviewReference ??
+                    ""
+                  }
+                />
+              </label>
+              <label className="field">
+                <span>{ud.suspensionReference}</span>
+                <input
+                  name="suspensionReference"
+                  disabled={suspendedCount === 0}
+                  required={suspendedCount > 0}
+                  minLength={3}
+                  maxLength={120}
+                  defaultValue={
+                    state.values?.suspensionReference ??
+                    savedInput?.unpaid?.suspensionReference ??
+                    ""
+                  }
+                />
+              </label>
+            </div>
+            <label className="benefit-confirm">
+              <input name="unpaidConfirmed" type="checkbox" required />
+              {ud.confirm}
             </label>
           </section>
         )}
@@ -408,11 +509,18 @@ export function PayrollForm({
         <details className="workflow-details">
           <summary>{wd.guidance}</summary>
           <div className="workflow-guidance">
-            <p>{periodContext.annual_leave ? ad.help : periodD.help}</p>
+            <p>
+              {periodContext.unpaid
+                ? ud.help
+                : periodContext.annual_leave
+                  ? ad.help
+                  : periodD.help}
+            </p>
             {includeSettlement ? (
               <p>{sd.help}</p>
             ) : (
-              !periodContext.annual_leave && <p>{periodD.scope}</p>
+              !periodContext.annual_leave &&
+              !periodContext.unpaid && <p>{periodD.scope}</p>
             )}
             <p>{periodD.deductionHelp}</p>
             <p>{rd.hoursScope}</p>
@@ -433,11 +541,13 @@ export function PayrollForm({
               name="period_reviewed"
               required
             />
-            {periodContext.annual_leave
-              ? ad.calendarConfirm
-              : includeSettlement
-                ? sd.calendarConfirm
-                : periodD.calendarConfirm}
+            {periodContext.unpaid
+              ? ud.calendarConfirm
+              : periodContext.annual_leave
+                ? ad.calendarConfirm
+                : includeSettlement
+                  ? sd.calendarConfirm
+                  : periodD.calendarConfirm}
           </label>
           <label className="benefit-confirm">
             <input
@@ -446,11 +556,13 @@ export function PayrollForm({
               name="standard"
               required
             />
-            {periodContext.annual_leave
-              ? ad.standard
-              : includeSettlement
-                ? sd.standard
-                : periodD.standard}
+            {periodContext.unpaid
+              ? ud.standard
+              : periodContext.annual_leave
+                ? ad.standard
+                : includeSettlement
+                  ? sd.standard
+                  : periodD.standard}
           </label>
         </section>
         <button type="button" className="button secondary" onClick={calculate}>
@@ -467,6 +579,7 @@ export function PayrollForm({
                   ...payrollPeriodLines(previewInput, locale, result),
                   ...payrollSettlementLines(previewInput, result, locale),
                   ...payrollAnnualLines(previewInput, result, locale),
+                  ...payrollUnpaidLines(previewInput, result, locale),
                 ].map((line, index) => (
                   <p key={index}>{line}</p>
                 ))}

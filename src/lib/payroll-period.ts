@@ -99,6 +99,7 @@ export type PayrollPeriodContext = {
   settlement_allowed?: boolean;
   termination_date?: string | null;
   annual_leave?: { requests: { id: string; dates: string[] }[] };
+  unpaid?: { requests: { id: string; dates: string[] }[]; absences: string[] };
 };
 const bani = (v: number) => Math.round(v * 100);
 const lei = (v: number) => v / 100;

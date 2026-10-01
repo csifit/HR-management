@@ -45,6 +45,9 @@ export async function generateEmployeePdf(
   };
   const ro = input.locale === "ro";
   const payslip = input.template === "payslip";
+  const signatureNotice = ro
+    ? "Document generat electronic, fără semnătură electronică."
+    : "Electronically generated document without an electronic signature.";
   const W = 595.28,
     H = 841.89,
     margin = 48,
@@ -85,8 +88,24 @@ export async function generateEmployeePdf(
     page = pdf.addPage([W, H]);
     y = H - margin;
   };
-  const paragraph = (value: string, size = 11, color = ink, gap = 10) => {
-    for (const line of wrap(value, size)) {
+  const paragraph = (
+    value: string,
+    size = 11,
+    color = ink,
+    gap = 10,
+    keepNotice = false,
+  ) => {
+    const lines = wrap(value, size);
+    for (const [index, line] of lines.entries()) {
+      // Keep the payslip's final figures/rule note with its signature notice.
+      // Long references may paginate, but must not create a notice-only page.
+      if (keepNotice && index === Math.max(0, lines.length - 4)) {
+        const remainingHeight =
+          (lines.length - index) * size * 1.3 +
+          gap +
+          wrap(signatureNotice, 9).length * 9 * 1.3;
+        if (y - remainingHeight < 76) newPage();
+      }
       if (y - size < 76) newPage();
       page.drawText(line, { x: margin, y: y - size, font, size, color });
       y -= size * (payslip ? 1.3 : 1.55);
@@ -126,7 +145,7 @@ export async function generateEmployeePdf(
     paragraph(`${label}: ${value}`, 10, ink, 3);
   y -= payslip ? 8 : 18;
   if (input.template !== "summary")
-    paragraph(input.body, payslip ? 9.5 : 11, ink, payslip ? 8 : 16);
+    paragraph(input.body, payslip ? 9.5 : 11, ink, payslip ? 4 : 16, payslip);
   else
     paragraph(
       ro
@@ -136,13 +155,7 @@ export async function generateEmployeePdf(
       muted,
       16,
     );
-  paragraph(
-    ro
-      ? "Document generat electronic, fără semnătură electronică."
-      : "Electronically generated document without an electronic signature.",
-    9,
-    muted,
-  );
+  paragraph(signatureNotice, 9, muted);
   const pages = pdf.getPages();
   const footer = clean(input.brandName);
   const footerSize = Math.min(

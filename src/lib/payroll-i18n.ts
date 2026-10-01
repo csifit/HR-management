@@ -1,6 +1,7 @@
 import type { Locale } from "./i18n";
 import { payrollSettlementLines } from "./payroll-settlement-i18n.ts";
 import { payrollAnnualLines } from "./payroll-annual-i18n.ts";
+import { payrollUnpaidLines } from "./payroll-unpaid-i18n.ts";
 import type { PayrollInput, PayrollResult } from "./payroll";
 import { payrollPeriodLines } from "./payroll-period-i18n.ts";
 const en = {
@@ -192,6 +193,14 @@ export function payslipBody(
   });
   const ro = locale === "ro";
   const rows = payrollRows.filter((k) => {
+    // v7 adds the reviewed date/evidence breakdown; omit zero optional relief
+    // and supplementary deductions to keep ordinary payslips compact.
+    if (
+      v.unpaid &&
+      ["relief", "youngDeduction", "childrenDeduction"].includes(k) &&
+      result[k] === 0
+    )
+      return false;
     if (k === "taxBaseBeforeRounding")
       return result.taxBaseBeforeRounding !== result.taxBase;
     if (["cashGross", "meals", "healthBase"].includes(k))
@@ -207,6 +216,7 @@ export function payslipBody(
     ...payrollPeriodLines(v, locale, result),
     ...payrollSettlementLines(v, result, locale, true),
     ...payrollAnnualLines(v, result, locale, true),
+    ...payrollUnpaidLines(v, result, locale, true),
     `${ro ? "Funcție de bază / deducere tineri" : "Primary employment / young-person deduction"}: ${v.primary === "yes" ? d.yes : d.no} / ${v.young === "yes" ? d.yes : d.no}`,
     `${ro ? "Persoane în întreținere / copii eligibili" : "Dependants / eligible children"}: ${v.dependants} / ${v.children}`,
     `${ro ? "Diminuare salariu după 23.12.2025" : "Basic-pay reduction since 23.12.2025"}: ${v.reduced === "yes" ? d.yes : d.no}`,
@@ -218,9 +228,9 @@ export function payslipBody(
     ...(v.evidence ? [`${d.evidence}: ${v.evidence}`] : []),
     ...(v.meals > 0 ? [`${d.mealsReference}: ${v.mealsReference}`] : []),
     ...(v.advance > 0 ? [`${d.advanceReference}: ${v.advanceReference}`] : []),
-    "",
+    ...(v.unpaid ? [] : [""]),
     ...rows.map((k) => `${d[k]}: ${money.format(result[k])}`),
-    ...(v.annualLeave ? [] : [""]),
+    ...(v.annualLeave || v.unpaid ? [] : [""]),
     `${d.rules}: ${result.rules}`,
     d.footer,
   ].join("\n");

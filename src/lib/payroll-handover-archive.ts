@@ -33,6 +33,12 @@ function reviewInstructions(p: PayrollHandoverPayload, brandName: string) {
         ? "Format v4: datele aprobate de concediu, tarifele zilnice și referințele apar în payroll.csv și manifest.json; PDF-ul include o detaliere separată. Salariul de bază realizat pentru rândurile v6 acoperă doar zilele lucrate; indemnizația înlocuiește salariul de bază pentru concediu. Indemnizația și lichidarea sunt deja incluse în brut, taxe și net. Nu le adăugați din nou. Câmpurile de concediu pentru versiunile vechi sunt goale."
         : "Format v4: approved leave dates, daily rates and references appear in payroll.csv and manifest.json, with a separate PDF breakdown. Earned basic for v6 rows covers only worked days; leave pay replaces basic pay for leave dates. Leave and settlement are already included in gross, taxes and net. Do not add again. Older-version annual-leave fields are empty."
       : "";
+  const unpaidNote =
+    p.format_version === "HRConnector-accountant-v5"
+      ? p.locale === "ro"
+        ? "Format v5: datele neplătite, clasificarea și suspendările confirmate, referințele și componentele salvate sunt incluse în CSV/manifest/PDF. Salariul de bază exclude deja aceste zile; nu deduceți încă o dată suma exclusă din net. Numai suspendările formale confirmate reduc zilele active ale plafonului. Concediul de odihnă și lichidarea sunt deja incluse în brut și net. Nu execută suspendări sau REGES."
+        : "Format v5: unpaid dates, reviewed classification/suspensions, references and saved components are included in CSV/manifest/PDF. Basic pay already excludes these days; do not subtract excluded basic again from net. Only confirmed formal suspensions reduce active floor days. Annual leave and settlement are already included in gross/net. Does not execute suspensions or REGES."
+      : "";
   return p.locale === "ro"
     ? `${brandName} — Pachet pentru contabil\n${revision}\n${reference}
 CONFIDENȚIAL. Arhiva nu este criptată. Verificați conținutul și transmiteți-l numai prin metoda securizată aprobată de organizație.
@@ -53,6 +59,7 @@ Fișiere:
 ${periodNote}
 ${settlementNote}
 ${annualNote}
+${unpaidNote}
 
 CSV: UTF-8 cu BOM, separator punct și virgulă, virgulă zecimală, fără separatori de mii. Importați identificatorii și numerele contractelor ca text. Textele care ar putea fi interpretate drept formule sau numere cu zero inițial au prefix apostrof de protecție. Nu eliminați prefixul prin executarea unei formule. Toate sumele sunt în RON; orele contractuale au două zecimale. Valorile Da/Nu și excepțiile sunt traduse.
 
@@ -79,6 +86,7 @@ Files:
 ${periodNote}
 ${settlementNote}
 ${annualNote}
+${unpaidNote}
 
 CSV: UTF-8 with BOM, semicolon separator, decimal point, no thousands separators. Import IDs and contract numbers as text. Text that could be interpreted as a formula or a leading-zero number is prefixed with a protective apostrophe. Do not remove this prefix by evaluating a formula. All amounts are RON; contractual hours use two decimals. Yes/No values and exception labels are translated.
 
@@ -129,6 +137,9 @@ export async function buildPayrollHandoverArchive(
             annual_leave: item.input.annualLeave,
             annual_leave_amounts: item.result.annualLeave,
           }
+        : {}),
+      ...(item.input.unpaid
+        ? { unpaid: item.input.unpaid, unpaid_amounts: item.result.unpaid }
         : {}),
       ...(item.input.settlement
         ? {

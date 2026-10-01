@@ -74,7 +74,7 @@ const en = {
   sourceHelp:
     "Saving checks the current contract, schedule, attendance and benefits confirmation. If source data changes before approval, review and save the affected calculations again.",
   payrollScope:
-    "Supports normal full months, dated starters/leavers, approved annual leave and reviewed fully taxable termination pay in 2026. Leave rates are approved by the accountant; unused leave also needs an HR-confirmed balance. Partial-month minimum-wage relief, medical/unpaid leave and other adjustments need separate handling. Approval remains an internal HR review.",
+    "Supports normal full months, dated starters/leavers, approved annual leave, reviewed unpaid days and fully taxable termination pay in 2026. Leave rates are accountant-approved; unused leave needs an HR-confirmed balance. Formal suspension dates need separate evidence. Prorated minimum-wage relief, medical leave and other unsupported adjustments need separate handling. Approval remains an internal HR review.",
   invalid: "Check the form fields and required confirmations.",
   error: "Payroll could not be saved. Try again.",
   stale:
@@ -167,7 +167,7 @@ const ro: typeof en = {
   sourceHelp:
     "Salvarea verifică datele actuale despre contract, program, pontaj și confirmarea beneficiilor. Dacă acestea se schimbă înainte de aprobare, verifică și salvează din nou calculele afectate.",
   payrollScope:
-    "Acceptă luni complete, angajări/încetări cu date efective, concediu de odihnă aprobat și sume de lichidare verificate, integral impozabile, din 2026. Tarifele de concediu sunt aprobate de contabil; concediul neefectuat necesită și soldul confirmat de HR. Suma neimpozabilă la salariul minim pentru luni parțiale, concediul medical/neplătit și alte ajustări se tratează separat. Aprobarea rămâne o verificare internă HR.",
+    "Acceptă luni complete, angajări/încetări cu date efective, concediu de odihnă aprobat, zile neplătite verificate și sume de lichidare integral impozabile din 2026. Tarifele de concediu sunt aprobate de contabil; concediul neefectuat necesită soldul confirmat de HR. Suspendările formale necesită dovezi separate. Suma neimpozabilă prorată la salariul minim, concediul medical și alte ajustări neacceptate se tratează separat. Aprobarea rămâne o verificare internă HR.",
   invalid: "Verifică datele introduse și confirmările obligatorii.",
   error: "Nu am putut salva salarizarea. Încearcă din nou.",
   stale:

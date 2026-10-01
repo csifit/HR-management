@@ -48,7 +48,9 @@ Migration 019 adds optional reviewed termination settlements (v5): confirmed unu
 
 Migration 020 adds approved annual leave payroll (v6), per-request accountant-approved daily rates and evidence, current-basic minimum checks, worked-basic replacement and ordinary taxable leave cash. Approval rechecks leave/calendar/employment sources; payslips and v4 accountant packages retain saved components and full request facts without recalculating. Historic rate derivation and pre-leave payment execution remain external. See [annual leave workflow](payroll-annual-leave.md).
 
-Remaining: accountant reference validation (including fractional earnings and rounding boundaries), partial-month minimum-wage relief rounding, medical/unpaid leave pay and unsupported final-settlement cases, historical pay-component/rate calculation, cross-month prepayment reconciliation, other benefits, income-tax exemptions, other deductions, D112 and accounting-system adapters. No bank payment execution. Broader payroll coverage must be added as tested, versioned rules, never inferred silently.
+Migration 021 adds full-day approved unpaid leave and HR-reviewed zero-work attendance dates (v7). It replaces the basic pay for those dates, separately records evidenced formal suspension dates for active contribution-floor days, rechecks sources at approval and retains saved facts in payslips/v5 accountant packages. Generic attendance labels do not determine legal classification or suspend a contract. See [unpaid payroll workflow](payroll-unpaid-absences.md).
+
+Remaining: accountant reference validation (including fractional earnings and rounding boundaries), prorated minimum-wage relief rounding, zero-cash active-contract cases, medical leave pay and unsupported final-settlement cases, historical pay-component/rate calculation, cross-month prepayment reconciliation, other benefits, income-tax exemptions, other deductions, D112 and accounting-system adapters. No bank payment execution. Broader payroll coverage must be added as tested, versioned rules, never inferred silently.
 
 ## SAP connector — deferred
 

@@ -2,6 +2,8 @@
 
 Migration **015**, after 001–014, adds saved payroll runs for selected employees. Migrations **017–018** add normal mid-month starters/leavers with checked dates/day counts and v4 calculations. See [full-month rules](payroll-rules.md), [partial-month rules](payroll-partial-month-rules.md) and [partial-month workflow/release checks](payroll-partial-month.md). These are internal review records, not bank payments, D112 submissions or proof of payment.
 
+Migrations **019–021** extend this same approval/correction workflow with separately reviewed termination settlements, approved annual-leave pay and full-day unpaid leave/absences. Current v7 inputs require HR classification and independent evidence for any formal suspension dates; approval compares leave/attendance sources again. Earlier approved v3–v6 snapshots remain fixed. See [unpaid payroll and current release checks](payroll-unpaid-absences.md) for the current scope and migration order; no unsupported tax treatment is inferred from an attendance label.
+
 ## HR workflow
 
 1. Open **Payroll**, choose a 2026 month and create a draft. A run contains only employees explicitly added; it does not automatically cover the whole organisation. The current limit is 200 employees per monthly run.

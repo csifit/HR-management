@@ -5,11 +5,14 @@ import { redirect } from "next/navigation";
 import { requireHR } from "@/lib/auth";
 import { PartialPayrollReliefReview } from "@/lib/payroll-period";
 import { payrollSettlementFromForm } from "@/lib/payroll-settlement";
+import { payrollAnnualFromForm } from "@/lib/payroll-annual-leave";
 import {
-  payrollWithAnnualSchema,
-  calculatePayrollWithLeave,
-  payrollAnnualFromForm,
-} from "@/lib/payroll-annual-leave";
+  payrollWithUnpaidSchema,
+  calculatePayrollAdjusted,
+  payrollUnpaidFromForm,
+  UnpaidPayrollReview,
+} from "@/lib/payroll-unpaid";
+import { payrollUnpaidDictionary } from "@/lib/payroll-unpaid-i18n";
 import { payrollPeriodDictionary } from "@/lib/payroll-period-i18n";
 import { payrollRunDictionary } from "@/lib/payroll-run-i18n";
 import { getLocale } from "@/lib/locale";
@@ -23,7 +26,7 @@ const versioned = z.object({
   run_version: z.coerce.number().int().positive(),
 });
 const saveSchema = z.intersection(
-  payrollWithAnnualSchema,
+  payrollWithUnpaidSchema,
   versioned.extend({
     employee_id: z.uuid(),
     benefits_reviewed: z.literal("on"),
@@ -57,6 +60,7 @@ async function outcome(
       P0011: d.closedMonthOnly,
       P0012: d.limitReached,
       P0014: payrollPeriodDictionary(await getLocale()).reliefReview,
+      P0015: payrollUnpaidDictionary(await getLocale()).needsReview,
       D0001: d.locked,
       "23505": d.duplicate,
       "22023": d.invalid,
@@ -97,9 +101,11 @@ export async function savePayrollEntry(
     values = formValues(form);
   let period: unknown;
   let annualLeave: unknown;
+  let unpaid: unknown;
   try {
     period = JSON.parse(values.period);
     annualLeave = payrollAnnualFromForm(values);
+    unpaid = payrollUnpaidFromForm(values);
   } catch {
     return outcome({ code: "22023" }, values);
   }
@@ -108,15 +114,23 @@ export async function savePayrollEntry(
     period,
     settlement: payrollSettlementFromForm(values),
     annualLeave,
+    unpaid,
   });
   if (!parsed.success) return outcome({ code: "22023" }, values);
   const v = parsed.data,
-    input = payrollWithAnnualSchema.parse(v);
+    input = payrollWithUnpaidSchema.parse(v);
   try {
-    calculatePayrollWithLeave(input);
+    calculatePayrollAdjusted(input);
   } catch (error) {
     return outcome(
-      { code: error instanceof PartialPayrollReliefReview ? "P0014" : "22023" },
+      {
+        code:
+          error instanceof UnpaidPayrollReview
+            ? "P0015"
+            : error instanceof PartialPayrollReliefReview
+              ? "P0014"
+              : "22023",
+      },
       values,
     );
   }

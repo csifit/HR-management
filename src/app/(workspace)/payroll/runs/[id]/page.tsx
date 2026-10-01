@@ -27,6 +27,7 @@ import {
 } from "@/components/payroll-figures";
 import { payrollSettlementLines } from "@/lib/payroll-settlement-i18n";
 import { payrollAnnualLines } from "@/lib/payroll-annual-i18n";
+import { payrollUnpaidLines } from "@/lib/payroll-unpaid-i18n";
 import { PayrollHandoverForm } from "@/components/payroll-handover-form";
 import {
   PayrollRunCreateForm,
@@ -89,6 +90,11 @@ function SavedCalculation({
           {payrollAnnualLines(item.input, item.result, locale).map(
             (line, i) => (
               <p key={`annual-${i}`}>{line}</p>
+            ),
+          )}
+          {payrollUnpaidLines(item.input, item.result, locale).map(
+            (line, i) => (
+              <p key={`unpaid-${i}`}>{line}</p>
             ),
           )}
         </div>

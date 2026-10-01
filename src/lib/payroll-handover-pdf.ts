@@ -6,6 +6,7 @@ import { UnsupportedPdfText } from "./document-pdf.ts";
 import { payrollHandoverTotals } from "./payroll-handover.ts";
 import { payrollSettlementDictionary } from "./payroll-settlement-i18n.ts";
 import { payrollAnnualDictionary } from "./payroll-annual-i18n.ts";
+import { payrollUnpaidDictionary } from "./payroll-unpaid-i18n.ts";
 import type {
   PayrollHandoverPayload,
   PayrollMoneyKey,
@@ -576,6 +577,68 @@ export async function generatePayrollHandoverPdf(
         },
       ],
       annualItems,
+    );
+  }
+  const unpaidItems = payload.items.filter(
+    (i) => i.input.unpaid && i.result.unpaid,
+  );
+  if (unpaidItems.length) {
+    const ud = payrollUnpaidDictionary(payload.locale);
+    table(
+      ud.title,
+      ro
+        ? "RON. Baza exclude deja datele neplătite; nu deduceți din nou din net. Zilele active exclud numai suspendările formale confirmate."
+        : "RON. Basic pay already excludes unpaid dates; do not subtract again from net. Active days exclude only confirmed formal suspensions.",
+      [
+        {
+          title: ro ? "Angajat / contract" : "Employee / contract",
+          width: 150,
+          value: (i) => `${i.employee_name}\n${i.contract_number}`,
+        },
+        {
+          title: ro ? "Zile neplătite" : "Unpaid days",
+          width: 65,
+          right: true,
+          value: (i) =>
+            String(
+              i.input.unpaid!.requests.reduce((n, q) => n + q.dates.length, 0) +
+                i.input.unpaid!.absences.length,
+            ),
+        },
+        {
+          title: ro ? "Zile suspendate / active" : "Suspended / active days",
+          width: 95,
+          right: true,
+          value: (i) =>
+            `${i.input.unpaid!.suspendedDates.length} / ${i.result.unpaid!.activeWorkingDays}`,
+        },
+        {
+          title: ro ? "Bază exclusă" : "Excluded basic",
+          width: 105,
+          right: true,
+          value: (i) => money(i.result.unpaid!.unpaidBasic),
+        },
+        {
+          title: ro ? "Date / referințe" : "Dates / references",
+          width: width - 415,
+          value: (i) =>
+            [
+              ...i.input.unpaid!.requests.map(
+                (q) => `${ud.leave}: ${q.dates.join(", ")}\n${q.id}`,
+              ),
+              ...(i.input.unpaid!.absences.length
+                ? [`${ud.absences}: ${i.input.unpaid!.absences.join(", ")}`]
+                : []),
+              `${ud.reviewReference}: ${i.input.unpaid!.reviewReference}`,
+              ...(i.input.unpaid!.suspendedDates.length
+                ? [
+                    `${ud.suspended}: ${i.input.unpaid!.suspendedDates.join(", ")}\n${i.input.unpaid!.suspensionReference}`,
+                  ]
+                : []),
+            ].join("\n"),
+        },
+      ],
+      unpaidItems,
     );
   }
   const pages = pdf.getPages();

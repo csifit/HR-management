@@ -3,6 +3,7 @@ import { payrollPeriodSchema } from "./payroll-period.ts";
 import { payrollPeriodDictionary } from "./payroll-period-i18n.ts";
 import { payrollSettlementDictionary } from "./payroll-settlement-i18n.ts";
 import { payrollAnnualDictionary } from "./payroll-annual-i18n.ts";
+import { payrollUnpaidDictionary } from "./payroll-unpaid-i18n.ts";
 import {
   payrollRows,
   payrollDictionary,
@@ -17,6 +18,7 @@ export const HANDOVER_FORMAT = "HRConnector-accountant-v1";
 export const HANDOVER_PERIOD_FORMAT = "HRConnector-accountant-v2";
 export const HANDOVER_SETTLEMENT_FORMAT = "HRConnector-accountant-v3";
 export const HANDOVER_ANNUAL_FORMAT = "HRConnector-accountant-v4";
+export const HANDOVER_UNPAID_FORMAT = "HRConnector-accountant-v5";
 const textField = z.string().max(500);
 const savedMoney = z
   .number()
@@ -24,7 +26,7 @@ const savedMoney = z
   .min(0)
   .max(2000000)
   .refine((n) => Math.round(n * 100) / 100 === n);
-// Saved v3/v4/v5/v6 formats, independent of later calculator validation/rules.
+// Saved v3-v7 formats, independent of later calculator validation/rules.
 // No coercion, defaults or text trimming may change approved facts on export.
 const savedInput = z.object({
   month: z.string().regex(/^2026-(0[1-9]|1[0-2])$/),
@@ -75,6 +77,23 @@ const savedInput = z.object({
     })
     .strict()
     .optional(),
+  unpaid: z
+    .object({
+      requests: z
+        .array(
+          z
+            .object({ id: z.uuid(), dates: z.array(z.string()).min(1).max(31) })
+            .strict(),
+        )
+        .max(31),
+      absences: z.array(z.string()).max(31),
+      suspendedDates: z.array(z.string()).max(31),
+      reviewReference: z.string().min(3).max(120),
+      suspensionReference: z.string().max(120),
+      confirmed: z.literal("on"),
+    })
+    .strict()
+    .optional(),
   settlement: z
     .object({
       days: savedMoney.max(365),
@@ -94,6 +113,7 @@ const savedResult = z.object({
     "RO-2026-monthly-v4",
     "RO-2026-monthly-v5",
     "RO-2026-monthly-v6",
+    "RO-2026-monthly-v7",
   ]),
   month: z.string(),
   ...Object.fromEntries(payrollRows.map((key) => [key, savedMoney])),
@@ -101,6 +121,14 @@ const savedResult = z.object({
     .object({
       workedBasic: savedMoney.max(1000000),
       leaveGross: savedMoney.positive().max(1000000),
+    })
+    .strict()
+    .optional(),
+  unpaid: z
+    .object({
+      workedBasic: savedMoney.max(1000000),
+      unpaidBasic: savedMoney.max(1000000),
+      activeWorkingDays: z.number().int().min(0).max(31),
     })
     .strict()
     .optional(),
@@ -122,6 +150,7 @@ const payloadSchema = z.object({
     HANDOVER_PERIOD_FORMAT,
     HANDOVER_SETTLEMENT_FORMAT,
     HANDOVER_ANNUAL_FORMAT,
+    HANDOVER_UNPAID_FORMAT,
   ]),
   run: z.object({
     id: z.uuid(),
@@ -170,7 +199,8 @@ export function validatePayrollHandover(raw: unknown): PayrollHandoverPayload {
         i.result.month !== i.input.month ||
         (i.result.rules === "RO-2026-monthly-v4" ||
         i.result.rules === "RO-2026-monthly-v5" ||
-        i.result.rules === "RO-2026-monthly-v6"
+        i.result.rules === "RO-2026-monthly-v6" ||
+        i.result.rules === "RO-2026-monthly-v7"
           ? !i.input.period ||
             i.input.period.start.slice(0, 7) !== i.input.month ||
             !i.input.deductionEmployer ||
@@ -186,24 +216,32 @@ export function validatePayrollHandover(raw: unknown): PayrollHandoverPayload {
             i.input.deductionEmployer !== undefined ||
             i.input.deductionReference !== undefined) ||
         (i.result.rules === "RO-2026-monthly-v5" ||
-        (i.result.rules === "RO-2026-monthly-v6" &&
+        ((i.result.rules === "RO-2026-monthly-v6" ||
+          i.result.rules === "RO-2026-monthly-v7") &&
           i.input.settlement !== undefined)
           ? !validSavedSettlement(i)
           : i.input.settlement !== undefined ||
             i.result.settlement !== undefined) ||
-        (i.result.rules === "RO-2026-monthly-v6"
+        (i.result.rules === "RO-2026-monthly-v6" ||
+        (i.result.rules === "RO-2026-monthly-v7" &&
+          i.input.annualLeave !== undefined)
           ? !validSavedAnnual(i)
           : i.input.annualLeave !== undefined ||
-            i.result.annualLeave !== undefined),
+            i.result.annualLeave !== undefined) ||
+        (i.result.rules === "RO-2026-monthly-v7"
+          ? !validSavedUnpaid(i)
+          : i.input.unpaid !== undefined || i.result.unpaid !== undefined),
     ) ||
     data.format_version !==
-      (data.items.some((i) => i.result.rules === "RO-2026-monthly-v6")
-        ? HANDOVER_ANNUAL_FORMAT
-        : data.items.some((i) => i.result.rules === "RO-2026-monthly-v5")
-          ? HANDOVER_SETTLEMENT_FORMAT
-          : data.items.some((i) => i.result.rules === "RO-2026-monthly-v4")
-            ? HANDOVER_PERIOD_FORMAT
-            : HANDOVER_FORMAT) ||
+      (data.items.some((i) => i.result.rules === "RO-2026-monthly-v7")
+        ? HANDOVER_UNPAID_FORMAT
+        : data.items.some((i) => i.result.rules === "RO-2026-monthly-v6")
+          ? HANDOVER_ANNUAL_FORMAT
+          : data.items.some((i) => i.result.rules === "RO-2026-monthly-v5")
+            ? HANDOVER_SETTLEMENT_FORMAT
+            : data.items.some((i) => i.result.rules === "RO-2026-monthly-v4")
+              ? HANDOVER_PERIOD_FORMAT
+              : HANDOVER_FORMAT) ||
     data.latest_approved_revision < data.run.revision ||
     data.is_historical !== data.latest_approved_revision > data.run.revision ||
     (data.latest_approved_run_id === data.run.id) !== !data.is_historical
@@ -294,6 +332,49 @@ export function payrollHandoverTotals(
   ) as Record<PayrollMoneyKey, number>;
 }
 
+function validSavedUnpaid(i: PayrollHandoverPayload["items"][number]) {
+  const u = i.input.unpaid,
+    p = i.input.period,
+    r = i.result.unpaid;
+  if (!u || !p || !r) return false;
+  const dates = [...u.requests.flatMap((q) => q.dates), ...u.absences],
+    annual = i.input.annualLeave?.requests.flatMap((q) => q.dates) ?? [],
+    ids = u.requests.map((q) => q.id);
+  const ordered = (days: string[]) =>
+    days.every((d, n) => {
+      const day = new Date(`${d}T12:00:00Z`);
+      return (
+        /^2026-(0[1-9]|1[0-2])-\d{2}$/.test(d) &&
+        Number.isFinite(day.getTime()) &&
+        day.toISOString().slice(0, 10) === d &&
+        ![0, 6].includes(day.getUTCDay()) &&
+        d.slice(0, 7) === i.input.month &&
+        d >= p.start &&
+        d <= p.end &&
+        (n === 0 || d > days[n - 1])
+      );
+    });
+  return (
+    dates.length > 0 &&
+    new Set(dates).size === dates.length &&
+    dates.length + annual.length <= p.employedWorkingDays &&
+    !dates.some((d) => annual.includes(d)) &&
+    u.requests.every((q) => ordered(q.dates)) &&
+    ordered(u.absences) &&
+    ordered(u.suspendedDates) &&
+    ids.every((id, n) => n === 0 || id > ids[n - 1]) &&
+    u.suspendedDates.every((d) => dates.includes(d)) &&
+    u.reviewReference === u.reviewReference.trim() &&
+    u.suspensionReference === u.suspensionReference.trim() &&
+    (u.suspendedDates.length
+      ? u.suspensionReference.length >= 3
+      : u.suspensionReference === "") &&
+    r.activeWorkingDays === p.employedWorkingDays - u.suspendedDates.length &&
+    (!i.result.annualLeave ||
+      i.result.annualLeave.workedBasic === r.workedBasic)
+  );
+}
+
 // Quoting alone does not prevent spreadsheet formulas. Preserve risky text as text.
 export function payrollCsvText(value: string): string {
   const normalized = value
@@ -327,7 +408,8 @@ export function payrollHandoverCsvs(payload: PayrollHandoverPayload) {
     includePeriod = payload.format_version !== HANDOVER_FORMAT;
   const includeSettlement =
       payload.format_version === HANDOVER_SETTLEMENT_FORMAT ||
-      payload.format_version === HANDOVER_ANNUAL_FORMAT,
+      payload.format_version === HANDOVER_ANNUAL_FORMAT ||
+      payload.format_version === HANDOVER_UNPAID_FORMAT,
     sd = payrollSettlementDictionary(payload.locale);
   const settlementHeader = includeSettlement
     ? [
@@ -340,7 +422,9 @@ export function payrollHandoverCsvs(payload: PayrollHandoverPayload) {
         sd.otherReference,
       ]
     : [];
-  const includeAnnual = payload.format_version === HANDOVER_ANNUAL_FORMAT,
+  const includeAnnual =
+      payload.format_version === HANDOVER_ANNUAL_FORMAT ||
+      payload.format_version === HANDOVER_UNPAID_FORMAT,
     ad = payrollAnnualDictionary(payload.locale);
   const annualHeader = includeAnnual
     ? [
@@ -353,6 +437,20 @@ export function payrollHandoverCsvs(payload: PayrollHandoverPayload) {
       ]
     : [];
   const money = (n: number) => n.toFixed(2).replace(".", ro ? "," : ".");
+  const includeUnpaid = payload.format_version === HANDOVER_UNPAID_FORMAT,
+    ud = payrollUnpaidDictionary(payload.locale);
+  const unpaidHeader = includeUnpaid
+    ? [
+        ud.unpaidDays,
+        ud.suspendedDays,
+        ud.activeDays,
+        ud.workedBasic,
+        ud.unpaidBasic,
+        ud.reviewReference,
+        ud.suspensionReference,
+        ro ? "Date și cereri neplătite" : "Unpaid dates and requests",
+      ]
+    : [];
   const commonHeader = [
     ro ? "Luna" : "Month",
     ro ? "Revizie" : "Revision",
@@ -409,6 +507,7 @@ export function payrollHandoverCsvs(payload: PayrollHandoverPayload) {
       ...periodHeader,
       ...settlementHeader,
       ...annualHeader,
+      ...unpaidHeader,
       ...inputs.map((k) => d[k]),
       ...payrollRows.map((k) => d[k]),
       d.rules,
@@ -434,7 +533,8 @@ export function payrollHandoverCsvs(payload: PayrollHandoverPayload) {
             p.monthWorkingDays,
             p.employedWorkingDays,
             money(
-              item.result.annualLeave?.workedBasic ??
+              item.result.unpaid?.workedBasic ??
+                item.result.annualLeave?.workedBasic ??
                 (Math.round(item.result.cashGross * 100) -
                   Math.round(item.input.bonus * 100) -
                   Math.round(
@@ -487,6 +587,23 @@ export function payrollHandoverCsvs(payload: PayrollHandoverPayload) {
               JSON.stringify(item.input.annualLeave.requests),
             ]
           : ["", "", "", ""]
+        : []),
+      ...(includeUnpaid
+        ? item.input.unpaid && item.result.unpaid
+          ? [
+              item.input.unpaid.requests.reduce(
+                (n, q) => n + q.dates.length,
+                0,
+              ) + item.input.unpaid.absences.length,
+              item.input.unpaid.suspendedDates.length,
+              item.result.unpaid.activeWorkingDays,
+              money(item.result.unpaid.workedBasic),
+              money(item.result.unpaid.unpaidBasic),
+              item.input.unpaid.reviewReference,
+              item.input.unpaid.suspensionReference,
+              JSON.stringify(item.input.unpaid),
+            ]
+          : Array(8).fill("")
         : []),
       ...inputs.map((k) => {
         const v = item.input[k];
