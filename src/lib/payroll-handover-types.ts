@@ -17,7 +17,7 @@ export type PayrollHandoverPayload = {
   prepared_at: string;
   organisation_id: string;
   locale: Locale;
-  format_version: "HRConnector-accountant-v1";
+  format_version: "HRConnector-accountant-v1" | "HRConnector-accountant-v2";
   run: {
     id: string;
     month: string;

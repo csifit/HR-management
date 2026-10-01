@@ -74,7 +74,7 @@ const en = {
   sourceHelp:
     "Saving checks the current contract, schedule, attendance and benefits confirmation. If source data changes before approval, review and save the affected calculations again.",
   payrollScope:
-    "The calculator’s supported cases are unchanged. Approval is an internal HR review, not independent validation of the tax rules.",
+    "Supports normal full months and dated starters/leavers in 2026. Partial-month minimum-wage relief, leave adjustments and other final-settlement amounts need separate handling. Approval is an internal HR review, not independent tax-rule validation.",
   invalid: "Check the form fields and required confirmations.",
   error: "Payroll could not be saved. Try again.",
   stale:
@@ -167,7 +167,7 @@ const ro: typeof en = {
   sourceHelp:
     "Salvarea verifică datele actuale despre contract, program, pontaj și confirmarea beneficiilor. Dacă acestea se schimbă înainte de aprobare, verifică și salvează din nou calculele afectate.",
   payrollScope:
-    "Cazurile acceptate de calculator rămân neschimbate. Aprobarea este o verificare internă HR, nu o validare independentă a regulilor fiscale.",
+    "Acceptă luni complete și angajări/încetări cu date efective din 2026. Suma neimpozabilă la salariul minim pentru luni parțiale, concediile și alte sume de lichidare se tratează separat. Aprobarea este o verificare internă HR, nu o validare independentă a regulilor fiscale.",
   invalid: "Verifică datele introduse și confirmările obligatorii.",
   error: "Nu am putut salva salarizarea. Încearcă din nou.",
   stale:

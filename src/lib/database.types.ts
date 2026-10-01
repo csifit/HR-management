@@ -115,6 +115,10 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      payroll_period_context: {
+        Args: { p_org: string; p_employee: string; p_month: string };
+        Returns: import("./payroll-period").PayrollPeriodContext;
+      };
       prepare_payroll_handover: {
         Args: {
           p_org: string;

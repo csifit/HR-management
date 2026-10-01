@@ -9,6 +9,7 @@ import { requireUser, requireOrganisation, getMemberships } from "@/lib/auth";
 import { getDictionary } from "@/lib/locale";
 import { getLocale } from "@/lib/locale";
 import { platformDictionary } from "@/lib/platform-i18n";
+import { contractDictionary } from "@/lib/contract-i18n";
 import { deliverEmployeeInvitation } from "@/lib/employee-invitations";
 import { canManage, type ActionState } from "@/lib/types";
 import {
@@ -244,6 +245,12 @@ export async function saveContract(
     return failure();
   const parsed = contractSchema.safeParse(values(form));
   if (!parsed.success) return invalid(parsed.error, form);
+  const version = z.coerce
+    .number()
+    .int()
+    .positive()
+    .safeParse(form.get("review_version"));
+  if (contractId && !version.success) return invalid(version.error!, form);
   const query = contractId
     ? supabase
         .from("employment_contracts")
@@ -251,13 +258,19 @@ export async function saveContract(
         .eq("id", contractId)
         .eq("employee_id", employeeId)
         .eq("organisation_id", organisation.id)
+        .eq("review_version", version.data!)
     : supabase.from("employment_contracts").insert({
         ...parsed.data,
         organisation_id: organisation.id,
         employee_id: employeeId,
       });
-  const { error } = await query.select("id").single();
+  const { error, data } = await query.select("id").maybeSingle();
   if (error) return { ...(await failure(error.code)), values: values(form) };
+  if (!data)
+    return {
+      error: contractDictionary(await getLocale()).stale,
+      values: values(form),
+    };
   revalidatePath("/dashboard");
   revalidatePath("/contracts");
   revalidatePath(`/employees/${employeeId}`);

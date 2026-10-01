@@ -13,6 +13,10 @@ import {
   payrollEventLabel,
 } from "@/lib/payroll-run-i18n";
 import type { PayrollRunItem } from "@/lib/payroll-run-types";
+import {
+  payrollPeriodDictionary,
+  payrollPeriodLines,
+} from "@/lib/payroll-period-i18n";
 import { payrollHandoverDictionary } from "@/lib/payroll-handover-i18n";
 import { idSchema } from "@/lib/validation";
 import { timeEmployees } from "@/lib/time-data";
@@ -68,6 +72,15 @@ function SavedCalculation({
         {rd.savedOn}: {dateLabel(item.updated_at, locale)} · {d.rules}:{" "}
         {item.result.rules}
       </p>
+      {item.input.period && (
+        <div className="time-padding">
+          {payrollPeriodLines(item.input, locale, item.result).map(
+            (line, i) => (
+              <p key={i}>{line}</p>
+            ),
+          )}
+        </div>
+      )}
       <details className="time-padding">
         <summary>{rd.inputs}</summary>
         <div className="table-scroll">
@@ -257,21 +270,14 @@ export default async function PayrollRunPage({
   )
     .toISOString()
     .slice(0, 10);
-  const contract =
+  const periodContext =
     editable && employee
-      ? await supabase
-          .from("employment_contracts")
-          .select("gross_salary,working_hours")
-          .eq("organisation_id", organisation.id)
-          .eq("employee_id", employee.id)
-          .eq("status", "active")
-          .lte("start_date", run.month)
-          .or(`end_date.is.null,end_date.gte.${run.month}`)
-          .order("start_date", { ascending: false })
-          .limit(1)
-          .maybeSingle()
+      ? await supabase.rpc("payroll_period_context", {
+          p_org: organisation.id,
+          p_employee: employee.id,
+          p_month: run.month,
+        })
       : { data: null, error: null };
-  if (contract.error) throw new Error("Contract could not be loaded.");
   const totalRows = [
     "cashGross",
     "meals",
@@ -432,25 +438,32 @@ export default async function PayrollRunPage({
             <button className="button secondary">{dd.filter}</button>
           </form>
           {people.hasMore && <p className="time-help">{dd.more}</p>}
-          {editable && employee ? (
+          {editable && employee && periodContext.data ? (
             <section className="card time-form-card">
               <h2>
                 {employee.first_name} {employee.last_name}
               </h2>
               <PayrollForm
-                key={`${employee.id}:${run.version}`}
+                key={`${employee.id}:${run.version}:${JSON.stringify(periodContext.data)}`}
                 employeeId={employee.id}
                 runId={id}
                 runVersion={run.version}
                 month={month}
-                basic={contract.data?.gross_salary}
-                hours={contract.data?.working_hours}
+                basic={periodContext.data.basic}
+                hours={periodContext.data.hours}
+                periodContext={periodContext.data}
                 savedInput={savedItem?.input}
                 locale={locale}
               />
             </section>
           ) : (
-            !employee && <p className="notice">{dd.choose}</p>
+            <p className="notice">
+              {!employee
+                ? dd.choose
+                : editable
+                  ? payrollPeriodDictionary(locale).unavailable
+                  : d.inactive}
+            </p>
           )}
         </>
       )}

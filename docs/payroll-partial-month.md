@@ -1,0 +1,34 @@
+# Payroll for mid-month starters and leavers
+
+Apply **017** (`202610010017_contract_last_employed_day.sql`) and then **018** (`202610010018_partial_month_payroll.sql`) after the existing 001–016 history, before deploying this frontend. No new environment variables are required. The user reported applying/deploying/checking 016; remote state has not been independently verified. The assistant does not start the development server or perform this release.
+
+## HR workflow
+
+1. Confirm the employee's start date and a single applicable, unchanged RON contract. For a leaver, record the **actual last employed day, inclusive**, in the contract. The planned fixed-term expiry remains a separate field. Neither field automatically changes employee/contract status. An undated terminated contract remains editable but cannot supply payroll or automatic historical attendance.
+2. Check the organisation's public holidays/company exceptions. They are not imported automatically. This calculation supports a uniform Monday–Friday pattern throughout the month; explicit working weekends or nonstandard patterns need separate handling.
+3. Open a monthly payroll draft and select the employee, including a dated historical leaver. The server supplies the included dates, month working days, employed working days, monthly contract salary and hours. These source values cannot be edited in the payroll form.
+4. Enter the actual cash bonus, legally issued meal vouchers and already-paid advance for this month, with the existing references. These amounts are not prorated automatically. Confirm whether this employer may grant the eligible monthly personal deductions. Primary employment is a separate fact; for a partial primary-employment month, retain an evidence reference confirming deduction entitlement, including first-employer status when changing employers.
+5. Confirm normal work, dates/calendar, benefits and the supported case. Preview earned basic pay and deductions, then save. Basic pay uses employed working days divided by month working days, rounded once to bani. Monthly personal deductions are not prorated by days; the taxable-income cap applies. The contribution floor is prorated by working days and rounded to whole lei before floor contributions.
+6. After the month closes, review the selected employee set and approve. Dates, contract revision, calendar, schedule, manual attendance, company/employee details and relevant benefit sources are checked again. A changed source requires refreshing/reviewing/resaving. Source changes cannot rewrite an approved revision; use the existing correction workflow.
+
+**Partial-month minimum-wage relief candidates are blocked for accountant review.** The rounding of prorated relief before tax calculation remains unconfirmed. Do not change primary-employment or salary-reduction answers to bypass this check. Leave pay, no-shows/reduced hours, overtime, salary changes, overlapping contracts, unused-leave compensation and other final-settlement amounts are also outside this bounded calculation. [Rules, conventions and primary sources](payroll-partial-month-rules.md) distinguish confirmed rules from application conventions and unresolved cases. Accountant/SAGA reference comparisons remain outstanding.
+
+## Attendance, privacy and saved documents
+
+Automatic attendance can now recover elapsed normal working days for a terminated employee with one dated eligible contract. It stops at the earlier planned expiry or actual last employed day. Manual records and approved leave remain intact; future/today hours are not inferred. Automatic rows continue to have no manual version. HR can enter overrides through the existing attendance workflow. Such reduced/extra hours block this normal-pay calculator instead of silently changing salary.
+
+The actual termination date appears in the employee's scoped privacy review export. Payroll records/history retain the existing single-employee export boundary. No new salary data is copied into generic audit metadata.
+
+New saves use `RO-2026-monthly-v4`, including full-month saves. Legacy inputs without period metadata still use v3 and require full-month active employment. Existing approved figures remain immutable. **Drafts saved before 018 must be refreshed and their entries resaved**, because the source snapshot now includes the checked employment period and termination date. Corrections copy saved entries; review/resave them when sources have changed.
+
+Individual PDFs show the saved employed dates, employed/month working days, earned basic pay and deduction reference. They use approved amounts without invoking current tax rules. A v4 accountant package uses `HRConnector-accountant-v2`; its detailed CSV adds dates, day counts, earned basic pay and deduction facts, the remaining-pay CSV adds dates/day counts, and the manifest includes each saved period. All-v3 packages retain v1. Mixed packages use v2 with blank period columns for retained full-month v3 rows. Printed individual tables include dates and day counts. Monthly contractual basic salary remains distinct from earned basic salary.
+
+## Synthetic release checks in RO and EN
+
+- Compare a September starter at 10,000 lei, starting September 16 with no calendar exceptions, against the accountant's reference: 11/22 working days and 5,000 lei earned basic. Check the explicitly evidenced deduction employer, preview, saved result, PDF and accountant CSV.
+- Check a July four-hour contract at 2,162.50 lei ending July 22: 16/23 working days, 1,504.35 lei earned basic and a 2,870 lei contribution floor. This is an implementation example, not independent accountant approval.
+- Verify planned fixed-term expiry and an earlier actual termination independently cap the interval. Mark a dated employee/contract terminated and inspect historical automatic attendance, inclusive end, zero work after end, and preserved manual/leave rows.
+- Confirm an exact-minimum full-time partial primary-employment case is blocked with its review message. Verify undated termination, overlapping/draft/suspended contracts, leave, no-show/extra hours, zero working-day intervals and nonstandard schedules cannot be saved.
+- Change a date/calendar/contract after saving and verify approval requires review/resave. Test stale form/run versions. Approve a correction and confirm the original v3 or v4 figures stay unchanged.
+- Download mixed v3/v4 and all-v3 packages. Check schema version, blank legacy period cells, dates, evidence, exact saved amounts and manifest hashes. Inspect long-name/multipage PDFs. Verify employee/manager/other-tenant/MFA-incomplete and inactive-organisation restrictions.
+- Test private PDF Storage completion and a scoped privacy ZIP with the termination date and only that employee's payroll. Signed-in checks and live Storage are separate from synthetic local tests; the user manages them.

@@ -11,6 +11,7 @@ import {
 import { getEmployee } from "@/lib/data";
 import { getLocale } from "@/lib/locale";
 import { dictionary, dateLabel, moneyLabel, actionLabel } from "@/lib/i18n";
+import { contractDictionary } from "@/lib/contract-i18n";
 import { canManage } from "@/lib/types";
 import { Avatar, StatusBadge, Detail, EmptyState } from "@/components/ui";
 import { EmployeeOnboarding } from "@/components/employee-onboarding";
@@ -26,6 +27,7 @@ export default async function EmployeePage({
     await getEmployee((await params).id);
   const locale = await getLocale();
   const d = dictionary(locale);
+  const cd = contractDictionary(locale);
   const manage = canManage(membership.role);
   const writable = manage && organisation.status === "active";
   const own = employee.user_id === user.id;
@@ -285,8 +287,11 @@ export default async function EmployeePage({
                     <Detail label={d.startDate}>
                       {dateLabel(contract.start_date, locale)}
                     </Detail>
-                    <Detail label={d.endDate}>
+                    <Detail label={cd.expiry}>
                       {dateLabel(contract.end_date, locale)}
+                    </Detail>
+                    <Detail label={cd.lastDay}>
+                      {dateLabel(contract.termination_date, locale)}
                     </Detail>
                     <Detail label={d.jobTitle}>{contract.job_title}</Detail>
                     <Detail label={d.workingHours}>

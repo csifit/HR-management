@@ -89,7 +89,7 @@ export async function generateEmployeePdf(
     for (const line of wrap(value, size)) {
       if (y - size < 76) newPage();
       page.drawText(line, { x: margin, y: y - size, font, size, color });
-      y -= size * (payslip ? 1.4 : 1.55);
+      y -= size * (payslip ? 1.3 : 1.55);
     }
     y -= gap;
   };
@@ -126,7 +126,7 @@ export async function generateEmployeePdf(
     paragraph(`${label}: ${value}`, 10, ink, 3);
   y -= payslip ? 8 : 18;
   if (input.template !== "summary")
-    paragraph(input.body, payslip ? 9.5 : 11, ink, 16);
+    paragraph(input.body, payslip ? 9.5 : 11, ink, payslip ? 8 : 16);
   else
     paragraph(
       ro

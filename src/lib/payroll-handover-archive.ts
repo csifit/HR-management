@@ -4,7 +4,6 @@ import { generatePayrollHandoverPdf } from "./payroll-handover-pdf.ts";
 import {
   payrollHandoverCsvs,
   validatePayrollHandover,
-  HANDOVER_FORMAT,
 } from "./payroll-handover.ts";
 import type { PayrollHandoverPayload } from "./payroll-handover-types";
 
@@ -16,6 +15,12 @@ const MAX_ZIP_BYTES = 4 * 1024 * 1024;
 function reviewInstructions(p: PayrollHandoverPayload, brandName: string) {
   const revision = `${p.run.month.slice(0, 7)} / r${p.run.revision}`;
   const reference = `Run: ${p.run.id}\nExport: ${p.export_id}\n`;
+  const periodNote =
+    p.format_version === "HRConnector-accountant-v2"
+      ? p.locale === "ro"
+        ? "Format v2: payroll.csv include perioada de angajare, zilele lucrătoare, salariul de bază realizat și confirmarea deducerilor. remaining-pay.csv include perioada și zilele. Pentru rândurile v3 păstrate, câmpurile de perioadă sunt goale: acele calcule acoperă luna completă. Salariul de bază lunar contractual nu se confundă cu salariul realizat."
+        : "Format v2: payroll.csv includes employed dates, working days, earned basic pay and monthly deduction evidence. remaining-pay.csv includes employed dates and days. Retained v3 rows have empty period fields: their calculations cover the full month. Contractual monthly basic pay differs from earned basic pay."
+      : "";
   return p.locale === "ro"
     ? `${brandName} — Pachet pentru contabil\n${revision}\n${reference}
 CONFIDENȚIAL. Arhiva nu este criptată. Verificați conținutul și transmiteți-l numai prin metoda securizată aprobată de organizație.
@@ -32,6 +37,8 @@ Fișiere:
 - remaining-pay.csv: netul în numerar, avansurile deja plătite și restul de plată.
 - totals.csv: suma exactă a valorilor salvate pentru angajații incluși.
 - manifest.json: domeniul exportului, revizia și amprentele SHA-256 ale fișierelor. Amprentele verifică integritatea, nu sunt o semnătură digitală.
+
+${periodNote}
 
 CSV: UTF-8 cu BOM, separator punct și virgulă, virgulă zecimală, fără separatori de mii. Importați identificatorii și numerele contractelor ca text. Textele care ar putea fi interpretate drept formule sau numere cu zero inițial au prefix apostrof de protecție. Nu eliminați prefixul prin executarea unei formule. Toate sumele sunt în RON; orele contractuale au două zecimale. Valorile Da/Nu și excepțiile sunt traduse.
 
@@ -54,6 +61,8 @@ Files:
 - remaining-pay.csv: cash net, advances already paid and remaining cash payable.
 - totals.csv: exact sums of saved amounts for the included employees.
 - manifest.json: scope, revision and file SHA-256 hashes. Hashes check integrity; they are not a digital signature.
+
+${periodNote}
 
 CSV: UTF-8 with BOM, semicolon separator, decimal point, no thousands separators. Import IDs and contract numbers as text. Text that could be interpreted as a formula or a leading-zero number is prefixed with a protective apostrophe. Do not remove this prefix by evaluating a formula. All amounts are RON; contractual hours use two decimals. Yes/No values and exception labels are translated.
 
@@ -84,7 +93,7 @@ export async function buildPayrollHandoverArchive(
   )
     throw new HandoverSizeError("Handover files exceed the size limit");
   const manifest = {
-    format: HANDOVER_FORMAT,
+    format: payload.format_version,
     export_id: payload.export_id,
     prepared_at: payload.prepared_at,
     organisation_id: payload.organisation_id,
@@ -98,6 +107,7 @@ export async function buildPayrollHandoverArchive(
     employees: payload.items.map((item) => ({
       employee_id: item.employee_id,
       item_id: item.id,
+      ...(item.input.period ? { period: item.input.period } : {}),
     })),
     is_historical: payload.is_historical,
     latest_approved_run_id: payload.latest_approved_run_id,

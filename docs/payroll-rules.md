@@ -2,6 +2,8 @@
 
 Rule identifier: `RO-2026-monthly-v3`. Rounding references reviewed on 24 September 2026. This is a bounded payroll calculation module, not a D112 filing system, bank payment system or complete treatment of every Romanian employment situation. Have the organisation's payroll accountant validate representative results before relying on them for payments.
 
+This document describes the preserved full-month v3 rules. New saves after migration 018 use v4, including normal mid-month starters/leavers. See [partial-month rules and primary sources](payroll-partial-month-rules.md) and [workflow/release checks](payroll-partial-month.md) for the expansion, explicit conventions and the unresolved partial-month minimum-wage relief case. Approved v3 figures are not rewritten.
+
 ## Supported facts and calculations
 
 With migration 013, payslip generation requires a Monday–Friday recurring schedule throughout the selected month. Other weekday patterns need separate payroll review; adding attendance schedules does not expand the tax calculator's supported contract assumptions.

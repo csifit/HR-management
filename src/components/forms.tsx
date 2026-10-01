@@ -21,6 +21,7 @@ import {
   saveMember,
 } from "@/app/actions";
 import { dictionary, roleLabel, type Locale } from "@/lib/i18n";
+import { contractDictionary } from "@/lib/contract-i18n";
 import type {
   ActionState,
   Employee,
@@ -375,6 +376,7 @@ export function ContractForm({
   contract?: Contract;
 }) {
   const d = dictionary(locale);
+  const cd = contractDictionary(locale);
   const [state, action, pending] = useActionState(
     saveContract.bind(null, employee.id, contract?.id ?? null),
     initial,
@@ -402,6 +404,13 @@ export function ContractForm({
   );
   return (
     <form action={action} className="employee-form">
+      {contract && (
+        <input
+          type="hidden"
+          name="review_version"
+          value={contract.review_version}
+        />
+      )}
       <Feedback state={state} />
       <div className="form-section">
         <div className="form-grid">
@@ -432,7 +441,7 @@ export function ContractForm({
           })}
           <Field
             name="end_date"
-            label={d.endDate}
+            label={cd.expiry}
             state={state}
             required={kind === "fixed_term"}
           >
@@ -452,6 +461,20 @@ export function ContractForm({
                 <input id="end_date" disabled value="" type="date" />
               </>
             )}
+          </Field>
+          <Field name="termination_date" label={cd.lastDay} state={state}>
+            <input
+              name="termination_date"
+              id="termination_date"
+              type="date"
+              defaultValue={value("termination_date")}
+              min="1900-01-01"
+              max="2200-12-31"
+              aria-describedby="termination-date-help"
+            />
+            <p id="termination-date-help" className="time-help">
+              {cd.lastDayHelp}
+            </p>
           </Field>
           {field("job_title", d.jobTitle, "text", employee.job_title, {
             maxLength: 120,

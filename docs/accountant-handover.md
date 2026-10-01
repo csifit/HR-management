@@ -15,6 +15,8 @@ CSV uses UTF-8 with BOM, semicolons, no thousands separators, and locale-specifi
 
 The PDF contains the summary, cash salary/deduction table and voucher/employer-cost table, with repeated headers and references. Unsupported font characters cause the complete package to fail instead of silently losing text.
 
+Migration **018** adds `HRConnector-accountant-v2` for packages containing saved v4 payroll. Detailed CSV includes employed dates, working-day counts, earned basic pay and deduction evidence; remaining-pay CSV includes dates/day counts. The manifest retains each v4 period and mixed rule versions; printed rows show dates/day counts. Retained v3 rows have blank period columns in mixed packages. All-v3 packages retain v1. Exports continue to use saved figures without recalculating tax. See [partial-month workflow](payroll-partial-month.md) for migrations 017–018 and release checks.
+
 ## Revisions and scope
 
 Figures, company details and employee/contract labels come from immutable approved snapshots. Later employee, company or contract edits do not change that revision's export. Taxes are never recalculated at download time. Totals sum saved amounts in integer bani.

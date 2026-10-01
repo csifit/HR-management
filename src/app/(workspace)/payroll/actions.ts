@@ -3,7 +3,12 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireHR } from "@/lib/auth";
-import { payrollSchema, calculatePayroll } from "@/lib/payroll";
+import {
+  payrollRunInputSchema,
+  calculatePayrollRun,
+  PartialPayrollReliefReview,
+} from "@/lib/payroll-period";
+import { payrollPeriodDictionary } from "@/lib/payroll-period-i18n";
 import { payrollRunDictionary } from "@/lib/payroll-run-i18n";
 import { getLocale } from "@/lib/locale";
 import { generateApprovedPayrollPdf } from "@/lib/payroll-run-pdf";
@@ -16,10 +21,11 @@ const versioned = z.object({
   run_version: z.coerce.number().int().positive(),
 });
 const saveSchema = z.intersection(
-  payrollSchema,
+  payrollRunInputSchema,
   versioned.extend({
     employee_id: z.uuid(),
     benefits_reviewed: z.literal("on"),
+    period_reviewed: z.literal("on"),
   }),
 );
 const createSchema = z
@@ -48,6 +54,7 @@ async function outcome(
       P0010: d.sourceChanged,
       P0011: d.closedMonthOnly,
       P0012: d.limitReached,
+      P0014: payrollPeriodDictionary(await getLocale()).reliefReview,
       D0001: d.locked,
       "23505": d.duplicate,
       "22023": d.invalid,
@@ -85,15 +92,24 @@ export async function savePayrollEntry(
   form: FormData,
 ): Promise<ActionState> {
   const c = await requireHR(true),
-    values = formValues(form),
-    parsed = saveSchema.safeParse(values);
-  if (!parsed.success) return outcome({ code: "22023" }, values);
-  const v = parsed.data,
-    input = payrollSchema.parse(v);
+    values = formValues(form);
+  let period: unknown;
   try {
-    calculatePayroll(input);
+    period = JSON.parse(values.period);
   } catch {
     return outcome({ code: "22023" }, values);
+  }
+  const parsed = saveSchema.safeParse({ ...values, period });
+  if (!parsed.success) return outcome({ code: "22023" }, values);
+  const v = parsed.data,
+    input = payrollRunInputSchema.parse(v);
+  try {
+    calculatePayrollRun(input);
+  } catch (error) {
+    return outcome(
+      { code: error instanceof PartialPayrollReliefReview ? "P0014" : "22023" },
+      values,
+    );
   }
   const { error } = await c.supabase.rpc("save_payroll_item", {
     p_org: c.organisation.id,

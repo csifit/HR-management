@@ -46,6 +46,10 @@ export const contractSchema = z
     end_date: z
       .union([date, z.literal("")])
       .transform((value) => value || null),
+    termination_date: z
+      .union([date, z.literal("")])
+      .default("")
+      .transform((value) => value || null),
     job_title: z.string().trim().min(2).max(120),
     cor_code: z.string().regex(/^\d{6}$/),
     contract_type: z.enum(["indefinite", "fixed_term"]),
@@ -68,6 +72,16 @@ export const contractSchema = z
       ctx.addIssue({
         code: "custom",
         path: ["end_date"],
+        message: "date_order",
+      });
+    if (
+      value.termination_date &&
+      (value.termination_date < value.start_date ||
+        (value.end_date && value.termination_date > value.end_date))
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["termination_date"],
         message: "date_order",
       });
   });

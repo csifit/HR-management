@@ -1,8 +1,39 @@
-# Safe checkpoint — 30 September 2026
+# Safe checkpoint — 1 October 2026
+
+## Current state — payroll for mid-month starters/leavers
+
+**This section supersedes older resume instructions below.** The user selected and asked to continue **Payroll: mid-month starters/leavers**. Baseline: `cd3d150` (`Accountant handover is implemented`), with migration 016 applied, deployed and checked **as reported by the user**, not independently verified. SAP remains paused. This expansion is local and uncommitted; migrations **017–018 have not been applied remotely by the assistant**.
+
+### Implementation
+
+- **017** adds nullable `employment_contracts.termination_date`: actual last employed day, inclusive, separate from planned fixed-term expiry. Contract forms/views show both in RO/EN, validate date bounds and reject stale edits through `review_version`. Dates do not automatically change status. Legacy undated terminated contracts stay editable; they cannot provide supported payroll or inferred historical work. Existing tenant/role/MFA/status/audit/review guards remain in force. The scoped employee privacy export adds this date while preserving earlier sections.
+- Date-aware `attendance_month` preserves manual records and approved leave and derives elapsed working days for one eligible dated contract, including historical leavers. Work stops at the earlier planned expiry/actual end. Ambiguous/ineligible employment and today/future days do not produce automatic worked hours.
+- **018** adds the checked HR-only `payroll_period_context` RPC and separate private v4 calculation. The server derives the inclusive employee/contract/month interval and calendar working days, matches monthly contract salary/hours, and rejects overlap, unsupported status/currency/schedule, leave, reduced/extra/manual hours or positive work outside the interval. Saving/approval retain organisation locking, role/tenant/MFA/status/version checks. Preview and SQL calculate independently with exact bani.
+- `RO-2026-monthly-v4` prorates normal basic pay by employed/month working days, with half-ban upward rounding. This salary convention is explicit and still requires independent accountant comparison. Actual bonuses/issued vouchers/paid advances remain unprorated. The contribution floor uses the employed working-day ratio, rounded to whole lei before contributions. Monthly deductions use actual gross and taxable-income caps; deduction employer/evidence is separate from primary employment. HR confirms period/calendar, normal work, eligibility and benefits.
+- **Partial-month minimum-wage relief candidates are blocked (`P0014`)**: the pre-tax rounding of prorated relief remains unconfirmed. Do not bypass by changing eligibility answers. Leave pay, no-shows, overtime, salary changes, overlapping contracts, unused-leave compensation and other final-settlement extras remain outside the supported calculation. Full-month relief remains supported. See `docs/payroll-partial-month-rules.md` for official sources, confirmed rules, combined interpretations, application conventions and unresolved cases.
+- New UI saves use v4, including full months; legacy no-period requests retain v3/full-month checks. Existing approved v3 figures are immutable. **Refresh/resave entries in pre-018 drafts**, because stable source snapshots now include the period/date. Corrections retain originals and require review/resave when sources change.
+- Approved payslips and saved-result screens show dates, employed/month working days, earned basic and deduction evidence without recalculating approved figures. Normal RO/EN samples fit one A4 page with readable 9.5-point body text. Accountant packages containing v4 use **`HRConnector-accountant-v2`**: extra CSV period/earned/deduction facts, dates/day counts in printed tables and remaining-pay CSV, saved periods in the manifest, and mixed-version README guidance. All-v3 packages retain v1; mixed packages leave legacy period columns blank. Export privacy/limits/history stay unchanged.
+
+### Verification and release boundaries
+
+- **174/174 full regression tests passed** (38 new cases), covering calculations/rounding, JS/SQL parity, employment dates, source changes, roles/tenants/MFA/status/version, v3 preservation/corrections, mixed CSV/ZIP manifests and saved-period PDFs. Tests use synthetic local/PGlite fixtures; no production service was exercised. A SQL alias ambiguity found by the first focused run was fixed; test fixtures were corrected to respect historical-schedule restrictions and invoke access-denied RPCs rather than failing during RLS-hidden version reads.
+- **Full ESLint and production build including TypeScript passed.** After visual QA adjusted payslip line spacing to prevent an orphan footer page, **12/12 focused PDF/export tests, changed-file ESLint and the final production build passed**. `git diff --check` passed. No dependency or environment variable was added.
+- Latest RO/EN payslips and three-page mixed handover PDFs were rendered with Poppler and visually inspected. A 35-employee long-name/period fixture retained all 70 period labels over 19 pages, checked through an all-page contact sheet and full-page samples. Temporary synthetic QA files are removed before handoff. These deliberately modified saved-result fixtures test non-recalculation and are not accountant reference outputs.
+- Local tests do not establish independent accountant/SAGA correctness, live Supabase migration/Storage state or signed-in UI behaviour. The assistant did not commit, push, deploy, apply production migrations, send email or execute payments. **Never run `npm run dev`, start a server or stop the user's server.** The user manages VS Code and signed-in checks. Do not print `.env.local`; no secret is recorded here. Earlier CLI 403 is not proof of logout; do not blindly repair/reapply migrations.
+
+### Release and next steps
+
+1. Check actual migration history, apply **017 then 018 after 001–016**, and deploy this frontend through the user's usual process. No new environment settings. Refresh/resave old drafts before approval.
+2. Perform the RO/EN synthetic checks in `docs/payroll-partial-month.md`: starter/leaver dates/calendar, dated historical attendance, preview/save/approval/correction, immutable original v3, mixed exports, private PDF completion, scoped privacy export and access restrictions. Compare representative results with the accountant/SAGA before payment reliance.
+3. Next payroll work: resolve partial-month relief rounding with an independent authoritative/accountant reference, then leave pay/final-settlement cases as separate versioned changes. REGES submissions, signing, provider privacy operations and Stripe/SAGA reconciliation remain on the roadmap. SAP stays paused. No new feature is selected automatically by this checkpoint.
+
+---
+
+## Earlier checkpoint — 30 September 2026
 
 ## Current state — accountant handover
 
-**This section supersedes older resume instructions below.** The user explicitly selected accountant handover after pausing SAP. Started from committed `1b63db4` (`Current state — monthly payroll approval`). SAP remains deferred. The implementation is local and uncommitted; live migration/deployment status has not been inferred from the commit.
+**This section supersedes older resume instructions below.** The user explicitly selected accountant handover after pausing SAP. Implementation started from `1b63db4` (`Current state — monthly payroll approval`) and is now committed as `cd3d150` (`Accountant handover is implemented`). The working tree was clean when the next turn began. **The user confirms migration 016 was applied, the app deployed and the feature checked.** This is user-reported release verification; the assistant has not independently inspected production. SAP remains deferred.
 
 ### Implementation
 
@@ -16,14 +47,14 @@
 
 - **136/136 regression tests passed**, including 25 new handover tests for SQL permissions/tenant/MFA/status/version checks, immutable projections, historical confirmation, correction context, CSV quoting/formula protection, exact bani totals, ZIP hashes/contents, bounded same-origin request handling and RO/EN PDF pagination. Tests use synthetic local/PGlite fixtures; no production services were exercised.
 - **TypeScript, full ESLint, production build and `git diff --check` passed.** Sample RO/EN three-page PDFs were rendered with Poppler and visually inspected; 200-employee long-name fixtures were rendered and checked through all-page contact sheets plus full-page samples. Repeated headers, references and complete row text were retained. Temporary QA outputs were removed.
-- **Apply migration 016 after checking 001–015 migration history, before deploying this frontend.** No remote database or deployment was touched or verified in this turn. Earlier CLI 403 is not proof of logout; do not blindly repair or reapply migrations. Signed-in UI/live download checks remain for the user's normal release process.
-- No commit, push, deployment, production HR changes, email or payment. **Never run `npm run dev`, start another server or stop the user's server.** The user manages VS Code and signed-in checks.
+- **Release confirmed by the user:** migration 016 applied, deployment completed and feature checked. The exact manual scenarios were not enumerated; do not claim independent production verification or automatically rerun/reapply the release. Earlier CLI 403 is not proof of logout; do not blindly repair migrations.
+- The assistant performed no commit, push, deployment, production HR changes, email or payment; the user handled the release. **Never run `npm run dev`, start another server or stop the user's server.** The user manages VS Code and signed-in checks.
 
 ### Next steps
 
-1. Review/apply migration 016 after checking existing history, then deploy through the user's usual process.
-2. Run the synthetic RO/EN checks in `docs/accountant-handover.md`: current/historical/correction downloads, CSV spreadsheet import, PDF layout, attempt history and tenant/role/MFA/status denial.
-3. Compare representative saved payroll outputs with accountant/SAGA references before payment reliance. Remaining core work includes broader payroll cases, REGES submission, signing, provider privacy operations and Stripe/SAGA reconciliation. SAP stays paused.
+1. Next feature selection is pending. Recommended: payroll for mid-month starters/leavers, as a bounded expansion separate from leave-pay cases. Alternatives offered: REGES connection/submission workflow or Stripe subscriptions with SAGA invoicing. No new payroll rule or billing policy has been accepted merely by offering these choices.
+2. Compare representative saved payroll outputs with accountant/SAGA references before payment reliance. The user's feature check does not imply independent tax-rule validation.
+3. Remaining core work includes broader payroll cases, REGES submission, signing, provider privacy operations and Stripe/SAGA reconciliation. SAP stays paused. Existing synthetic release scenarios remain documented in `docs/accountant-handover.md` for future regression checks.
 
 ---
 

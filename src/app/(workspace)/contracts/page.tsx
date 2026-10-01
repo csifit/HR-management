@@ -6,6 +6,7 @@ import { getLocale } from "@/lib/locale";
 import { dictionary, dateLabel } from "@/lib/i18n";
 import { getOwnEmployee, pageNumber } from "@/lib/data";
 import { employeeDictionary } from "@/lib/employee-i18n";
+import { contractDictionary } from "@/lib/contract-i18n";
 import type { ContractStatus } from "@/lib/types";
 import { PageHeader, EmptyState, StatusBadge } from "@/components/ui";
 export default async function ContractsPage({
@@ -18,6 +19,7 @@ export default async function ContractsPage({
   const locale = await getLocale();
   const d = dictionary(locale);
   const ed = employeeDictionary(locale);
+  const cd = contractDictionary(locale);
   const self = membership.role === "employee";
   const ownEmployee = self ? await getOwnEmployee() : null;
   const filters = await searchParams;
@@ -115,7 +117,8 @@ export default async function ContractsPage({
                   {!self && <th>{d.employee}</th>}
                   <th>{d.contractType}</th>
                   <th>{d.startDate}</th>
-                  <th>{d.endDate}</th>
+                  <th>{cd.expiry}</th>
+                  <th>{cd.lastDay}</th>
                   <th>{d.status}</th>
                   <th>
                     <span className="sr-only">{d.view}</span>
@@ -145,6 +148,7 @@ export default async function ContractsPage({
                       <td>{d[c.contract_type]}</td>
                       <td>{dateLabel(c.start_date, locale)}</td>
                       <td>{dateLabel(c.end_date, locale)}</td>
+                      <td>{dateLabel(c.termination_date, locale)}</td>
                       <td>
                         <StatusBadge value={c.status} d={d} />
                       </td>

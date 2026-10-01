@@ -390,6 +390,15 @@ export async function generatePayrollHandoverPdf(
     right: true,
     value: (item) => money(item.result[key]),
   });
+  const employeeLabel = (item: PayrollHandoverPayload["items"][number]) => {
+    const p = item.input.period;
+    return (
+      item.employee_name +
+      (p
+        ? `\n${p.start} - ${p.end}\n${p.employedWorkingDays}/${p.monthWorkingDays} ${ro ? "zile lucrătoare" : "working days"}`
+        : "")
+    );
+  };
   table(
     ro ? "Salarii și rețineri" : "Pay and employee deductions",
     ro
@@ -399,7 +408,7 @@ export async function generatePayrollHandoverPdf(
       {
         title: ro ? "Angajat" : "Employee",
         width: 162,
-        value: (item) => item.employee_name,
+        value: employeeLabel,
       },
       {
         title: ro ? "Contract" : "Contract",
@@ -424,7 +433,7 @@ export async function generatePayrollHandoverPdf(
       {
         title: ro ? "Angajat" : "Employee",
         width: 190,
-        value: (item) => item.employee_name,
+        value: employeeLabel,
       },
       {
         title: "Contract",

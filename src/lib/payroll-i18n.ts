@@ -1,5 +1,6 @@
 import type { Locale } from "./i18n";
 import type { PayrollInput, PayrollResult } from "./payroll";
+import { payrollPeriodLines } from "./payroll-period-i18n.ts";
 const en = {
   title: "Payroll calculator",
   payslip: "Payslip",
@@ -62,7 +63,7 @@ const en = {
   salaryPrivate:
     "Visible only to HR until you change the document's visibility.",
   mismatch:
-    "Check active status, full-month contract coverage, matching hours/salary and the benefits review. Leave, partial months and unsupported benefits need separate handling.",
+    "Refresh and check employment dates/status, the single contract, matching hours/salary and the benefits review. Source changes require saving again. Leave, manual hour adjustments and unsupported benefits need separate handling.",
 };
 const ro: typeof en = {
   title: "Calculator salarial",
@@ -127,7 +128,7 @@ const ro: typeof en = {
   salaryPrivate:
     "Vizibil doar pentru HR până la modificarea vizibilității documentului.",
   mismatch:
-    "Verifică starea activă, contractul pentru luna completă, orele/salariul și confirmarea beneficiilor. Concediile, lunile parțiale și beneficiile neacceptate necesită tratare separată.",
+    "Reîncarcă și verifică datele/starea angajării, contractul unic, orele/salariul și confirmarea beneficiilor. Modificările surselor necesită o nouă salvare. Concediile, ajustările manuale de ore și beneficiile neacceptate se tratează separat.",
 };
 export function payrollDictionary(locale: Locale) {
   return locale === "ro" ? ro : en;
@@ -201,6 +202,7 @@ export function payslipBody(
   return [
     `${d.month}: ${v.month} | ${ro ? "Ore/zi" : "Hours/day"}: ${v.hours}`,
     `${ro ? "Bază brută / prime" : "Basic gross / bonuses"}: ${money.format(v.basic)} / ${money.format(v.bonus)}`,
+    ...payrollPeriodLines(v, locale, result),
     `${ro ? "Funcție de bază / deducere tineri" : "Primary employment / young-person deduction"}: ${v.primary === "yes" ? d.yes : d.no} / ${v.young === "yes" ? d.yes : d.no}`,
     `${ro ? "Persoane în întreținere / copii eligibili" : "Dependants / eligible children"}: ${v.dependants} / ${v.children}`,
     `${ro ? "Diminuare salariu după 23.12.2025" : "Basic-pay reduction since 23.12.2025"}: ${v.reduced === "yes" ? d.yes : d.no}`,

@@ -92,7 +92,19 @@ export const payrollSchema = z
       message: "A part-time floor exception requires supporting evidence",
     },
   );
-export type PayrollInput = z.infer<typeof payrollSchema>;
+export type PayrollPeriod = {
+  start: string;
+  end: string;
+  monthWorkingDays: number;
+  employedWorkingDays: number;
+  monthCalendarDays: number;
+  employedCalendarDays: number;
+};
+export type PayrollInput = z.infer<typeof payrollSchema> & {
+  period?: PayrollPeriod;
+  deductionEmployer?: "this" | "other";
+  deductionReference?: string;
+};
 export type PayrollResult = {
   rules: string;
   month: string;

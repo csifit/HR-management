@@ -71,6 +71,7 @@ export type Contract = {
   contract_number: string;
   start_date: string;
   end_date: string | null;
+  termination_date: string | null;
   job_title: string;
   cor_code: string;
   contract_type: ContractType;
