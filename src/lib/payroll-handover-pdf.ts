@@ -4,6 +4,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, rgb } from "pdf-lib";
 import { UnsupportedPdfText } from "./document-pdf.ts";
 import { payrollHandoverTotals } from "./payroll-handover.ts";
+import { payrollSettlementDictionary } from "./payroll-settlement-i18n.ts";
 import type {
   PayrollHandoverPayload,
   PayrollMoneyKey,
@@ -288,7 +289,12 @@ export async function generatePayrollHandoverPdf(
     right?: boolean;
     value: (item: PayrollHandoverPayload["items"][number]) => string;
   };
-  const table = (section: string, intro: string, columns: Column[]) => {
+  const table = (
+    section: string,
+    intro: string,
+    columns: Column[],
+    sourceItems = payload.items,
+  ) => {
     let headerHeight = 0;
     const headerLines = columns.map((column) =>
       wrap(column.title, 9, column.width - 12),
@@ -328,7 +334,7 @@ export async function generatePayrollHandoverPdf(
       y -= headerHeight;
     };
     start();
-    payload.items.forEach((item, itemIndex) => {
+    sourceItems.forEach((item, itemIndex) => {
       const lines = columns.map((column) =>
         wrap(column.value(item), 9, column.width - 12),
       );
@@ -396,6 +402,9 @@ export async function generatePayrollHandoverPdf(
       item.employee_name +
       (p
         ? `\n${p.start} - ${p.end}\n${p.employedWorkingDays}/${p.monthWorkingDays} ${ro ? "zile lucrătoare" : "working days"}`
+        : "") +
+      (item.input.settlement
+        ? `\n${ro ? "Lichidare: vezi detalierea" : "Settlement: see breakdown"}`
         : "")
     );
   };
@@ -451,6 +460,63 @@ export async function generatePayrollHandoverPdf(
       ),
     ],
   );
+  const settlements = payload.items.filter(
+    (item) => item.input.settlement && item.result.settlement,
+  );
+  if (settlements.length) {
+    const sd = payrollSettlementDictionary(payload.locale);
+    table(
+      sd.title,
+      ro
+        ? "RON. Componente deja incluse în brut, taxe și net; nu se adună din nou. Soldul și tariful au fost aprobate extern."
+        : "RON. Components already included in gross, taxes and net; do not add again. Balance and rate were approved externally.",
+      [
+        {
+          title: ro ? "Angajat / contract" : "Employee / contract",
+          width: 160,
+          value: (item) =>
+            `${item.employee_name}\n${item.contract_number}\n${item.input.period!.end}`,
+        },
+        {
+          title: ro ? "Zile concediu" : "Unused days",
+          width: 80,
+          right: true,
+          value: (item) => String(item.input.settlement!.days),
+        },
+        {
+          title: ro ? "Tarif aprobat/zi" : "Approved rate/day",
+          width: 110,
+          right: true,
+          value: (item) => money(item.input.settlement!.dailyGross),
+        },
+        {
+          title: ro ? "Concediu neefectuat (brut)" : "Unused leave (gross)",
+          width: 110,
+          right: true,
+          value: (item) => money(item.result.settlement!.unusedLeaveGross),
+        },
+        {
+          title: ro ? "Alte sume brute" : "Other gross pay",
+          width: 110,
+          right: true,
+          value: (item) => money(item.result.settlement!.otherGross),
+        },
+        {
+          title: ro
+            ? "Referințe de verificare / aprobare"
+            : "Review / approval references",
+          width: width - 570,
+          value: (item) =>
+            [
+              `${ro ? "Sold" : "Balance"}: ${item.input.settlement!.balanceReference || "-"}`,
+              `${ro ? "Tarif" : "Rate"}: ${item.input.settlement!.rateReference || "-"}`,
+              `${ro ? "Alte sume" : "Other pay"}: ${item.input.settlement!.otherReference || "-"}`,
+            ].join("\n"),
+        },
+      ],
+      settlements,
+    );
+  }
   const pages = pdf.getPages();
   pages.forEach((pdfPage, index) => {
     page = pdfPage;

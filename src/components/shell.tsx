@@ -27,6 +27,7 @@ import type { Membership, Organisation } from "@/lib/types";
 import { canManage } from "@/lib/types";
 import { Brand, Avatar } from "./ui";
 import { platformDictionary } from "@/lib/platform-i18n";
+import { workflowDictionary } from "@/lib/workflow-i18n";
 export function LanguageSwitch({ locale }: { locale: Locale }) {
   return (
     <form
@@ -59,6 +60,7 @@ export function AppShell({
   platformAdmin: boolean;
 }) {
   const d = dictionary(locale);
+  const wd = workflowDictionary(locale);
   const path = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const nav = [
@@ -86,26 +88,28 @@ export function AppShell({
         ]
       : []),
     ...(canManage(membership.role)
-      ? [{ href: "/integrations/reges", label: "REGES-ONLINE", icon: Plug }]
-      : []),
-    ...(canManage(membership.role)
       ? [
           {
             href: "/payroll",
-            label:
-              locale === "ro" ? "Salarizare lunară" : "Monthly payroll",
+            label: locale === "ro" ? "Salarizare lunară" : "Monthly payroll",
             icon: Files,
           },
         ]
       : []),
+    ...(canManage(membership.role)
+      ? [{ href: "/integrations/reges", label: "REGES-ONLINE", icon: Plug }]
+      : []),
   ];
-  const current = path.startsWith("/settings/team")
-    ? d.team
-    : path.startsWith("/settings")
-      ? d.settings
-      : path.startsWith("/platform")
-        ? d.platform
-        : (nav.find((item) => path.startsWith(item.href))?.label ?? d.overview);
+  const current = path.startsWith("/account/security")
+    ? wd.security
+    : path.startsWith("/settings/team")
+      ? d.team
+      : path.startsWith("/settings")
+        ? d.settings
+        : path.startsWith("/platform")
+          ? d.platform
+          : (nav.find((item) => path.startsWith(item.href))?.label ??
+            d.overview);
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">
@@ -140,14 +144,14 @@ export function AppShell({
           {organisations.length > 1 && (
             <form action={switchOrganisation}>
               <label className="sr-only" htmlFor="organisation_id">
-                {d.settings}
+                {wd.chooseOrganisation}
               </label>
               <select
                 id="organisation_id"
                 name="organisation_id"
                 value={organisation.id}
                 onChange={(e) => e.currentTarget.form?.requestSubmit()}
-                aria-label={d.settings}
+                aria-label={wd.chooseOrganisation}
               >
                 {organisations.map((o) => (
                   <option key={o.id} value={o.id}>
@@ -173,23 +177,14 @@ export function AppShell({
               {label}
             </Link>
           ))}
-          {membership.role !== "employee" && (
-            <>
-              <span className="nav-section-label next-section">
-                {d.comingNext}
-              </span>
-              <span className="nav-item nav-planned" aria-disabled="true">
-                <Plug size={19} />
-                {d.integrations}
-                <span className="planned-dash">—</span>
-              </span>
-            </>
-          )}
         </nav>
         <div className="sidebar-bottom">
           {canManage(membership.role) && (
             <Link
-              className={`nav-item ${path === "/settings/team" ? "nav-active" : ""}`}
+              className={`nav-item ${path.startsWith("/settings/team") ? "nav-active" : ""}`}
+              aria-current={
+                path.startsWith("/settings/team") ? "page" : undefined
+              }
               href="/settings/team"
               onClick={() => setMobileOpen(false)}
             >
@@ -198,7 +193,12 @@ export function AppShell({
             </Link>
           )}
           <Link
-            className={`nav-item ${path === "/settings" ? "nav-active" : ""}`}
+            className={`nav-item ${path.startsWith("/settings") && !path.startsWith("/settings/team") ? "nav-active" : ""}`}
+            aria-current={
+              path.startsWith("/settings") && !path.startsWith("/settings/team")
+                ? "page"
+                : undefined
+            }
             href="/settings"
             onClick={() => setMobileOpen(false)}
           >
@@ -206,14 +206,26 @@ export function AppShell({
             {d.settings}
           </Link>
           {platformAdmin && (
-            <Link className="nav-item" href="/platform">
+            <Link
+              className={`nav-item ${path.startsWith("/platform") ? "nav-active" : ""}`}
+              href="/platform"
+              aria-current={path.startsWith("/platform") ? "page" : undefined}
+              onClick={() => setMobileOpen(false)}
+            >
               <ShieldCheck size={19} />
               {d.platform}
             </Link>
           )}
-          <Link className="nav-item" href="/account/security">
+          <Link
+            className={`nav-item ${path.startsWith("/account/security") ? "nav-active" : ""}`}
+            href="/account/security"
+            aria-current={
+              path.startsWith("/account/security") ? "page" : undefined
+            }
+            onClick={() => setMobileOpen(false)}
+          >
             <ShieldCheck size={19} />
-            {locale === "ro" ? "Securitatea contului" : "Account security"}
+            {wd.security}
           </Link>
           <div className="sidebar-user">
             <Avatar name={membership.display_name} />

@@ -3,11 +3,7 @@ import { notFound } from "next/navigation";
 import { requireHR } from "@/lib/auth";
 import { getLocale } from "@/lib/locale";
 import { dateLabel, moneyLabel, type Locale } from "@/lib/i18n";
-import {
-  payrollDictionary,
-  payrollRows,
-  floorExceptionLabels,
-} from "@/lib/payroll-i18n";
+import { payrollDictionary, floorExceptionLabels } from "@/lib/payroll-i18n";
 import {
   payrollRunDictionary,
   payrollEventLabel,
@@ -25,6 +21,11 @@ import { documentDictionary } from "@/lib/document-i18n";
 import { PageHeader } from "@/components/ui";
 import { EmployeeFilter } from "@/components/time-ui";
 import { PayrollForm } from "@/components/payroll-form";
+import {
+  PayrollFigures,
+  PayrollHighlights,
+} from "@/components/payroll-figures";
+import { payrollSettlementLines } from "@/lib/payroll-settlement-i18n";
 import { PayrollHandoverForm } from "@/components/payroll-handover-form";
 import {
   PayrollRunCreateForm,
@@ -79,6 +80,11 @@ function SavedCalculation({
               <p key={i}>{line}</p>
             ),
           )}
+          {payrollSettlementLines(item.input, item.result, locale).map(
+            (line, i) => (
+              <p key={`settlement-${i}`}>{line}</p>
+            ),
+          )}
         </div>
       )}
       <details className="time-padding">
@@ -111,20 +117,7 @@ function SavedCalculation({
           </table>
         </div>
       </details>
-      <div className="table-scroll">
-        <table>
-          <tbody>
-            {payrollRows.map((k) => (
-              <tr key={k}>
-                <th>{d[k]}</th>
-                <td>
-                  <strong>{moneyLabel(item.result[k], locale)}</strong>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <PayrollFigures result={item.result} locale={locale} />
     </section>
   );
 }
@@ -385,25 +378,39 @@ export default async function PayrollRunPage({
         {!items.length && <p className="time-padding">{d.emptyItems}</p>}
       </section>
       {!!items.length && (
-        <details className="card time-form-card" open>
-          <summary>{d.totals}</summary>
-          <div className="table-scroll">
-            <table>
-              <tbody>
-                <tr>
-                  <th>{d.count}</th>
-                  <td>{items.length}</td>
-                </tr>
-                {totalRows.map((key) => (
-                  <tr key={key}>
-                    <th>{pd[key]}</th>
-                    <td>{moneyLabel(total(key), locale)}</td>
+        <section className="card time-form-card">
+          <h2>
+            {d.totals} · {items.length}
+          </h2>
+          <PayrollHighlights
+            amounts={{
+              cashGross: total("cashGross"),
+              net: total("net"),
+              payable: total("payable"),
+              employerCost: total("employerCost"),
+            }}
+            locale={locale}
+          />
+          <details className="workflow-details">
+            <summary>{d.totals}</summary>
+            <div className="table-scroll">
+              <table>
+                <tbody>
+                  <tr>
+                    <th>{d.count}</th>
+                    <td>{items.length}</td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </details>
+                  {totalRows.map((key) => (
+                    <tr key={key}>
+                      <th>{pd[key]}</th>
+                      <td>{moneyLabel(total(key), locale)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </details>
+        </section>
       )}
       {run.status === "approved" && (
         <section className="card time-form-card">

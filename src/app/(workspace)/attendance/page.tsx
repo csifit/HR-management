@@ -11,6 +11,7 @@ import { singleParam, monthParam, attendanceTotals } from "@/lib/time";
 import { PageHeader } from "@/components/ui";
 import { EmployeeFilter } from "@/components/time-ui";
 import { AttendanceCalendar } from "@/components/attendance-calendar";
+import { workflowDictionary } from "@/lib/workflow-i18n";
 export default async function AttendancePage({
   searchParams,
 }: {
@@ -103,10 +104,6 @@ export default async function AttendancePage({
                 [d.workingDays, totals.working],
                 [d.workedDays, totals.worked],
                 [d.totalHours, totals.hours.toFixed(2)],
-                [d.annual, totals.annual],
-                [d.medical, totals.medical],
-                [d.unpaid, totals.unpaid],
-                [d.other, totals.other],
                 [d.missing, totals.missing],
               ] as const
             ).map(([label, value]) => (
@@ -115,6 +112,24 @@ export default async function AttendancePage({
                 <strong>{value}</strong>
               </div>
             ))}
+          </div>
+          <div className="attendance-absence-summary">
+            <h3>{workflowDictionary(locale).absenceTotals}</h3>
+            <dl>
+              {(
+                [
+                  [d.annual, totals.annual],
+                  [d.medical, totals.medical],
+                  [d.unpaid, totals.unpaid],
+                  [d.other, totals.other],
+                ] as const
+              ).map(([label, value]) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
           {self ? (
             <AttendanceCalendar

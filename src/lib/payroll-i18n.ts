@@ -1,4 +1,5 @@
 import type { Locale } from "./i18n";
+import { payrollSettlementLines } from "./payroll-settlement-i18n.ts";
 import type { PayrollInput, PayrollResult } from "./payroll";
 import { payrollPeriodLines } from "./payroll-period-i18n.ts";
 const en = {
@@ -203,6 +204,7 @@ export function payslipBody(
     `${d.month}: ${v.month} | ${ro ? "Ore/zi" : "Hours/day"}: ${v.hours}`,
     `${ro ? "Bază brută / prime" : "Basic gross / bonuses"}: ${money.format(v.basic)} / ${money.format(v.bonus)}`,
     ...payrollPeriodLines(v, locale, result),
+    ...payrollSettlementLines(v, result, locale, true),
     `${ro ? "Funcție de bază / deducere tineri" : "Primary employment / young-person deduction"}: ${v.primary === "yes" ? d.yes : d.no} / ${v.young === "yes" ? d.yes : d.no}`,
     `${ro ? "Persoane în întreținere / copii eligibili" : "Dependants / eligible children"}: ${v.dependants} / ${v.children}`,
     `${ro ? "Diminuare salariu după 23.12.2025" : "Basic-pay reduction since 23.12.2025"}: ${v.reduced === "yes" ? d.yes : d.no}`,

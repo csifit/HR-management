@@ -4,6 +4,10 @@ import { readFile, readdir } from "node:fs/promises";
 import { PGlite } from "@electric-sql/pglite";
 import { calculatePayroll } from "../src/lib/payroll.ts";
 import { calculatePayrollRun } from "../src/lib/payroll-period.ts";
+import {
+  calculatePayrollEntry,
+  payrollEntrySchema,
+} from "../src/lib/payroll-settlement.ts";
 
 let db,
   org,
@@ -151,6 +155,264 @@ async function calculation(value) {
   ]);
 }
 
+const settlement = {
+  days: 5.5,
+  dailyGross: 250.25,
+  balanceReference: "Final balance reviewed",
+  rateReference: "Accountant approved rate",
+  otherGross: 1000.25,
+  otherReference: "Severance approval",
+  confirmed: "on",
+};
+test("termination compensation and ordinary severance match JS/SQL with exact bani and separate components", async () => {
+  await terminate("2026-01-16");
+  assert.equal((await context()).settlement_allowed, true);
+  const run = await create(),
+    value = payrollEntrySchema.parse(
+      await input({
+        bonus: 100.25,
+        settlement,
+        advance: 100,
+        advanceReference: "Advance already paid",
+      }),
+    );
+  const item = await save(run, value),
+    r = await scalar("select result from payroll_run_items where id=$1", [
+      item,
+    ]);
+  assert.deepEqual(r, calculatePayrollEntry(value));
+  assert.equal(r.settlement.unusedLeaveGross, 1376.38);
+  assert.equal(r.cashGross, 7931.43); // Basic 5,454.55 + bonus 100.25 + settlement 2,376.63.
+  assert.equal(r.payable, r.net - 100);
+  await approve(run);
+  const payload = await handover(run);
+  assert.equal(payload.format_version, "HRConnector-accountant-v3");
+  assert.deepEqual(payload.items[0].input, value);
+  assert.deepEqual(payload.items[0].result, r);
+  await db.query(
+    "update leave_balances set allowance=allowance+1 where employee_id=$1",
+    [employee],
+  );
+  await db.query(
+    "update employment_contracts set termination_date='2026-01-19' where id=$1",
+    [contract],
+  );
+  assert.deepEqual((await handover(run)).items[0].result, r);
+});
+
+test("settlement requires actual terminated status/date and rejects unresolved leave", async () => {
+  const run = await create(),
+    inputValue = await input({ settlement });
+  assert.equal((await context()).settlement_allowed, false);
+  await assert.rejects(
+    () => save(run, { ...base, ...{ period: undefined }, settlement }),
+    { code: "22023" },
+  );
+  await assert.rejects(() => save(run, inputValue), { code: "P0010" });
+  await db.query(
+    "update employment_contracts set termination_date='2026-01-31' where id=$1",
+    [contract],
+  );
+  await assert.rejects(() => save(run, inputValue), { code: "P0010" });
+  await terminate("2026-01-31");
+  const type = await scalar(
+    "select id from leave_types where organisation_id=$1 and category='annual'",
+    [org],
+  );
+  await db.query(
+    "insert into leave_balances(organisation_id,employee_id,leave_type_id,year,allowance) values($1,$2,$3,2026,21)",
+    [org, employee, type],
+  );
+  await db.query(
+    "insert into leave_requests(organisation_id,employee_id,leave_type_id,start_date,end_date,work_dates,submitted_by) values($1,$2,$3,'2026-01-15','2026-01-15',array['2026-01-15'::date],$4)",
+    [org, employee, type, users.hr],
+  );
+  assert.equal((await context()).settlement_allowed, false);
+  await assert.rejects(() => save(run, inputValue), { code: "P0010" });
+  await db.query(
+    "update leave_requests set status='cancelled' where employee_id=$1",
+    [employee],
+  );
+  assert.equal((await context()).settlement_allowed, true);
+  await save(run, inputValue);
+});
+
+test("leave balance and request changes require a fresh settlement save before approval", async () => {
+  await terminate("2026-01-16");
+  const type = await scalar(
+    "select id from leave_types where organisation_id=$1 and category='annual'",
+    [org],
+  );
+  await db.query(
+    "insert into leave_balances(organisation_id,employee_id,leave_type_id,year,allowance) values($1,$2,$3,2026,21)",
+    [org, employee, type],
+  );
+  const run = await create(),
+    value = await input({ settlement });
+  await save(run, value);
+  await db.query(
+    "update leave_balances set allowance=22 where employee_id=$1",
+    [employee],
+  );
+  await assert.rejects(() => approve(run), { code: "P0010" });
+  await save(run, value);
+  await db.query(
+    "insert into leave_requests(organisation_id,employee_id,leave_type_id,start_date,end_date,work_dates,submitted_by,status) values($1,$2,$3,'2025-12-15','2025-12-15',array['2025-12-15'::date],$4,'cancelled')",
+    [org, employee, type, users.hr],
+  );
+  await assert.rejects(() => approve(run), { code: "P0010" });
+  await save(run, value);
+  await approve(run);
+});
+
+test("v5 parity covers part-time floors, vouchers, fractional balances and relief caps", async () => {
+  const p = (await context()).period;
+  for (const patch of [
+    { basic: 2025, hours: 4 },
+    {
+      basic: 2025,
+      hours: 4,
+      floorException: "student",
+      evidence: "Student certificate",
+    },
+    {
+      basic: 4050,
+      bonus: 0,
+      settlement: {
+        ...settlement,
+        days: 0,
+        dailyGross: 0,
+        balanceReference: "",
+        rateReference: "",
+        otherGross: 50,
+        otherReference: "Approval",
+      },
+    },
+    {
+      meals: 400.15,
+      mealsReference: "Issued meal vouchers",
+      young: "yes",
+      children: 2,
+    },
+    { primary: "no", deductionEmployer: "other" },
+    {
+      settlement: {
+        ...settlement,
+        days: 0.01,
+        dailyGross: 0.5,
+        otherGross: 0,
+        otherReference: "",
+      },
+    },
+    {
+      settlement: {
+        ...settlement,
+        days: 10.25,
+        dailyGross: 316.78,
+        otherGross: 0,
+        otherReference: "",
+      },
+    },
+  ]) {
+    const value = payrollEntrySchema.parse({
+      ...base,
+      period: p,
+      deductionEmployer: "this",
+      deductionReference: "",
+      settlement,
+      ...patch,
+    });
+    assert.deepEqual(await calculation(value), calculatePayrollEntry(value));
+  }
+});
+
+test("mixed v5/v3 handover uses v3 format and a correction preserves the original settlement", async () => {
+  const run = await create();
+  await terminate("2026-01-16");
+  const originalValue = await input({ settlement }),
+    id = await save(run, originalValue);
+  const colleague = await scalar(
+    "insert into employees(organisation_id,first_name,last_name,email,job_title,department,workplace,start_date,status) values($1,'Colleague','Person','colleague@period.test','Engineer','Product','Office','2026-01-01','active') returning id",
+    [org],
+  );
+  await db.query(
+    "insert into employment_contracts(organisation_id,employee_id,contract_number,start_date,job_title,cor_code,contract_type,working_hours,workplace,gross_salary,status) values($1,$2,'PART-2','2026-01-01','Engineer','251202','indefinite',8,'Office',10000,'active')",
+    [org, colleague],
+  );
+  await save(run, base, { e: colleague });
+  await approve(run);
+  const original = await scalar(
+    "select result from payroll_run_items where id=$1",
+    [id],
+  );
+  assert.equal(
+    (await handover(run)).format_version,
+    "HRConnector-accountant-v3",
+  );
+  const correction = await create(run);
+  await save(correction, {
+    ...originalValue,
+    settlement: { ...settlement, days: 6 },
+  });
+  await approve(correction);
+  assert.deepEqual(
+    (await handover(run, true)).items.find((i) => i.employee_id === employee)
+      .result,
+    original,
+  );
+  assert.equal((await handover(correction)).items[0].input.settlement.days, 6);
+  await assert.rejects(() => save(run, originalValue), { code: "D0001" });
+});
+
+test("v5 malformed facts, components and version are rejected without export history", async () => {
+  await terminate("2026-01-16");
+  const run = await create(),
+    value = await input({ settlement });
+  for (const patch of [
+    { days: -1 },
+    { days: 366 },
+    { dailyGross: 250.255 },
+    { days: "5.5" },
+    { confirmed: "" },
+    { rateReference: "" },
+    { otherReference: "" },
+    { hidden: true },
+  ])
+    await assert.rejects(
+      () => save(run, { ...value, settlement: { ...settlement, ...patch } }),
+      { code: "22023" },
+    );
+  for (const actor of [
+    users.other,
+    users.employee,
+    users.manager,
+    users.platform,
+  ])
+    await assert.rejects(() => save(run, value, { actor }), { code: "42501" });
+  await assert.rejects(() => save(run, value, { v: 99 }), { code: "P0006" });
+  await save(run, value);
+  await approve(run);
+  for (const [path, newValue] of [
+    ["{settlement,confirmed}", ""],
+    ["{settlement,rateReference}", ""],
+    ["{settlement}", null],
+  ])
+    await isolated(async () => {
+      await db.query(
+        "update payroll_run_items set input=jsonb_set(input,$1,$2::jsonb) where run_id=$3",
+        [path, JSON.stringify(newValue), run],
+      );
+      const count = await scalar(
+        "select count(*)::int from payroll_handover_exports",
+      );
+      await assert.rejects(() => handover(run), { code: "P0010" });
+      assert.equal(
+        await scalar("select count(*)::int from payroll_handover_exports"),
+        count,
+      );
+    });
+});
+
 before(async () => {
   db = new PGlite();
   await db.exec(`create role anon;create role authenticated;create schema auth;grant usage on schema auth to authenticated,anon;
@@ -229,6 +491,8 @@ test("period uses inclusive employment boundaries and saved calendar exceptions"
     contract_number: "PART-1",
     basic: 10000,
     hours: 8,
+    settlement_allowed: true,
+    termination_date: "2026-01-25",
     period: {
       start: "2026-01-16",
       end: "2026-01-25",

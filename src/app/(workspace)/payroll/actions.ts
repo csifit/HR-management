@@ -3,11 +3,12 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireHR } from "@/lib/auth";
+import { PartialPayrollReliefReview } from "@/lib/payroll-period";
 import {
-  payrollRunInputSchema,
-  calculatePayrollRun,
-  PartialPayrollReliefReview,
-} from "@/lib/payroll-period";
+  payrollEntrySchema,
+  calculatePayrollEntry,
+  payrollSettlementFromForm,
+} from "@/lib/payroll-settlement";
 import { payrollPeriodDictionary } from "@/lib/payroll-period-i18n";
 import { payrollRunDictionary } from "@/lib/payroll-run-i18n";
 import { getLocale } from "@/lib/locale";
@@ -21,7 +22,7 @@ const versioned = z.object({
   run_version: z.coerce.number().int().positive(),
 });
 const saveSchema = z.intersection(
-  payrollRunInputSchema,
+  payrollEntrySchema,
   versioned.extend({
     employee_id: z.uuid(),
     benefits_reviewed: z.literal("on"),
@@ -99,12 +100,16 @@ export async function savePayrollEntry(
   } catch {
     return outcome({ code: "22023" }, values);
   }
-  const parsed = saveSchema.safeParse({ ...values, period });
+  const parsed = saveSchema.safeParse({
+    ...values,
+    period,
+    settlement: payrollSettlementFromForm(values),
+  });
   if (!parsed.success) return outcome({ code: "22023" }, values);
   const v = parsed.data,
-    input = payrollRunInputSchema.parse(v);
+    input = payrollEntrySchema.parse(v);
   try {
-    calculatePayrollRun(input);
+    calculatePayrollEntry(input);
   } catch (error) {
     return outcome(
       { code: error instanceof PartialPayrollReliefReview ? "P0014" : "22023" },

@@ -44,7 +44,9 @@ Migration 016 adds an approved-revision accountant ZIP with a printable summary,
 
 Migrations 017–018 add normal mid-month starter/leaver calculations (v4), actual inclusive contract termination dates, checked working-day proration, monthly deduction entitlement/evidence, prorated contribution floors, historical dated-leaver attendance and period-aware saved PDFs/accountant exports. Earlier approved v3 snapshots remain unchanged. See [partial-month workflow](payroll-partial-month.md) and [rules/sources](payroll-partial-month-rules.md).
 
-Remaining: accountant reference validation (including fractional earnings and rounding boundaries), partial-month minimum-wage relief rounding, leave pay/final-settlement extras, other benefits, income-tax exemptions, other deductions, D112 and accounting-system adapters. No bank payment execution. Broader payroll coverage must be added as tested, versioned rules, never inferred silently.
+Migration 019 adds optional reviewed termination settlements (v5): confirmed unused days, an accountant-approved daily gross rate, evidenced other ordinary taxable termination pay, source rechecks and saved components in payslips/v3 accountant packages. See [settlement workflow](payroll-termination-settlements.md). The usability pass groups payroll entry, highlights key figures, compacts attendance and removes unavailable navigation; see [review and follow-ups](usability-review.md).
+
+Remaining: accountant reference validation (including fractional earnings and rounding boundaries), partial-month minimum-wage relief rounding, annual/medical leave pay and unsupported final-settlement cases, other benefits, income-tax exemptions, other deductions, D112 and accounting-system adapters. No bank payment execution. Broader payroll coverage must be added as tested, versioned rules, never inferred silently.
 
 ## SAP connector — deferred
 

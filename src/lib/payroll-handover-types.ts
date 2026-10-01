@@ -1,7 +1,10 @@
 import type { PayrollInput, PayrollResult } from "./payroll";
 import type { Locale } from "./i18n";
 
-export type PayrollMoneyKey = Exclude<keyof PayrollResult, "rules" | "month">;
+export type PayrollMoneyKey = Exclude<
+  keyof PayrollResult,
+  "rules" | "month" | "settlement"
+>;
 export type PayrollHandoverItem = {
   id: string;
   employee_id: string;
@@ -17,7 +20,10 @@ export type PayrollHandoverPayload = {
   prepared_at: string;
   organisation_id: string;
   locale: Locale;
-  format_version: "HRConnector-accountant-v1" | "HRConnector-accountant-v2";
+  format_version:
+    | "HRConnector-accountant-v1"
+    | "HRConnector-accountant-v2"
+    | "HRConnector-accountant-v3";
   run: {
     id: string;
     month: string;

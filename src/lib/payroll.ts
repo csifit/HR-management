@@ -23,6 +23,7 @@ const amount = z
       .refine(hasTwoDecimals, "Use at most two decimal places"),
   );
 const yesNo = z.enum(["yes", "no"]);
+export const payrollAmount = amount;
 export const floorExceptions = [
   "none",
   "student",
@@ -104,6 +105,16 @@ export type PayrollInput = z.infer<typeof payrollSchema> & {
   period?: PayrollPeriod;
   deductionEmployer?: "this" | "other";
   deductionReference?: string;
+  settlement?: PayrollSettlement;
+};
+export type PayrollSettlement = {
+  days: number;
+  dailyGross: number;
+  balanceReference: string;
+  rateReference: string;
+  otherGross: number;
+  otherReference: string;
+  confirmed: "on";
 };
 export type PayrollResult = {
   rules: string;
@@ -130,6 +141,7 @@ export type PayrollResult = {
   employerCass: number;
   cam: number;
   employerCost: number;
+  settlement?: { unusedLeaveGross: number; otherGross: number };
 };
 // All operands are bounded safe integers. Round only at the defined fiscal step.
 // Title IV: exact half rounds down; social contributions: exact half rounds up.

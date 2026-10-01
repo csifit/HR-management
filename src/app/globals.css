@@ -1,5 +1,115 @@
 @import "tailwindcss";
 
+.workflow-section {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+.workflow-section h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.workflow-facts,
+.payroll-highlights {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+.workflow-facts {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.workflow-facts dt,
+.payroll-highlights dt {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.workflow-facts dd,
+.payroll-highlights dd {
+  margin: 5px 0 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.payroll-highlights {
+  padding: 18px;
+}
+.payroll-highlights > div {
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--background);
+  border: 1px solid var(--line);
+}
+.payroll-highlights dd {
+  font-size: 18px;
+}
+.payroll-highlights .payroll-payable {
+  border-color: var(--brand);
+}
+.workflow-details {
+  border-top: 1px solid var(--line);
+}
+.workflow-details summary {
+  cursor: pointer;
+  min-height: 44px;
+  padding: 14px 18px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.workflow-guidance {
+  padding: 0 18px 14px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+}
+.workflow-guidance p {
+  margin: 8px 0;
+}
+.attendance-absence-summary {
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+.attendance-absence-summary h3 {
+  font-size: 13px;
+  margin: 0 0 10px;
+}
+.attendance-absence-summary dl {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+}
+.attendance-absence-summary dt {
+  font-size: 12px;
+  color: var(--muted);
+}
+.attendance-absence-summary dd {
+  font-weight: 600;
+  margin: 4px 0 0;
+}
+@media (max-width: 760px) {
+  .payroll-highlights,
+  .workflow-facts,
+  .attendance-absence-summary dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 420px) {
+  .workflow-facts {
+    grid-template-columns: 1fr;
+  }
+  .workflow-section {
+    padding: 14px;
+  }
+  .payroll-highlights dd {
+    font-size: 15px;
+  }
+}
+
 /* White-label theme: update these tokens together with src/lib/brand.ts. */
 :root {
   --brand: #2455db;
@@ -275,7 +385,7 @@ svg {
   overflow-y: auto;
 }
 .sidebar-brand {
-  padding: 29px 24px 28px;
+  padding: 22px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -285,7 +395,7 @@ svg {
   gap: 10px;
   align-items: center;
   position: relative;
-  margin: 0 17px 27px;
+  margin: 0 17px 20px;
   padding: 12px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -376,7 +486,7 @@ svg {
 }
 .sidebar-bottom {
   margin-top: auto;
-  padding: 30px 13px 0;
+  padding: 18px 13px 0;
 }
 .sidebar-user {
   display: flex;
@@ -2341,7 +2451,7 @@ td,
 }
 .security-factors li {
   padding: 18px 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 .integration-steps {
   padding-left: 20px;

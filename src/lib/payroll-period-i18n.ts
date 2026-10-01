@@ -68,7 +68,7 @@ export function payrollPeriodLines(
   });
   return [
     `${d.start}: ${p.start} | ${d.end}: ${p.end}`,
-    `${d.paidDays}: ${p.employedWorkingDays} / ${p.monthWorkingDays} | ${d.earned}: ${money.format(result ? (Math.round(result.cashGross * 100) - Math.round(input.bonus * 100)) / 100 : earnedBasicPay(input))}`,
+    `${d.paidDays}: ${p.employedWorkingDays} / ${p.monthWorkingDays} | ${d.earned}: ${money.format(result ? (Math.round(result.cashGross * 100) - Math.round(input.bonus * 100) - Math.round((result.settlement?.unusedLeaveGross ?? 0) * 100) - Math.round((result.settlement?.otherGross ?? 0) * 100)) / 100 : earnedBasicPay(input))}`,
     `${d.deductionEmployer}: ${input.deductionEmployer === "this" ? d.thisEmployer : d.otherEmployer}`,
     ...(input.deductionReference
       ? [`${d.deductionReference}: ${input.deductionReference}`]

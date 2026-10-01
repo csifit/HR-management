@@ -40,7 +40,11 @@ export default async function EmployeePage({
     "salary",
     "activity",
   ].includes(selected)
-    ? selected
+    ? ((selected === "contract" || selected === "salary") &&
+        !canSeeContracts) ||
+      (selected === "activity" && !manage)
+      ? "employment"
+      : selected
     : "personal";
   const [contracts, manager] = await Promise.all([
     supabase
@@ -138,7 +142,11 @@ export default async function EmployeePage({
               "activity",
             ] as const
           )
-            .filter((key) => key !== "activity" || manage)
+            .filter(
+              (key) =>
+                (key !== "activity" || manage) &&
+                ((key !== "contract" && key !== "salary") || canSeeContracts),
+            )
             .map((key) => (
               <Link
                 key={key}

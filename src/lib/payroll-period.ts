@@ -96,6 +96,8 @@ export type PayrollPeriodContext = {
   basic: number;
   hours: number;
   period: PayrollPeriod;
+  settlement_allowed?: boolean;
+  termination_date?: string | null;
 };
 const bani = (v: number) => Math.round(v * 100);
 const lei = (v: number) => v / 100;

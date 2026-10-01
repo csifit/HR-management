@@ -13,6 +13,10 @@ import {
 } from "pdf-lib";
 import { calculatePayroll, payrollSchema } from "../src/lib/payroll.ts";
 import {
+  calculatePayrollEntry,
+  payrollEntrySchema,
+} from "../src/lib/payroll-settlement.ts";
+import {
   calculatePayrollRun,
   payrollRunInputSchema,
 } from "../src/lib/payroll-period.ts";
@@ -104,6 +108,144 @@ function fixture(locale = "ro") {
     ],
   };
 }
+
+test("v5 mixed exports keep separate saved compensation, rate evidence and earned basic without recalculation", async () => {
+  for (const locale of ["ro", "en"]) {
+    const p = fixture(locale),
+      previous = structuredClone(p.items[0]);
+    previous.id = "c1000000-0000-4000-8000-000000000008";
+    previous.employee_id = "c1000000-0000-4000-8000-000000000009";
+    p.items.push(previous);
+    p.format_version = "HRConnector-accountant-v3";
+    const item = p.items[0];
+    item.input = payrollEntrySchema.parse({
+      ...item.input,
+      settlement: {
+        days: 5.5,
+        dailyGross: 250.25,
+        balanceReference: "Sold final revizuit",
+        rateReference: "Tarif aprobat contabil",
+        otherGross: 1000.25,
+        otherReference: "Aprobare compensație",
+        confirmed: "on",
+      },
+    });
+    item.result = calculatePayrollEntry(item.input);
+    const earned =
+      (Math.round(item.result.cashGross * 100) -
+        Math.round(item.input.bonus * 100) -
+        Math.round(item.result.settlement.unusedLeaveGross * 100) -
+        Math.round(item.result.settlement.otherGross * 100)) /
+      100;
+    // Deliberately different saved values verify that download does not recalculate.
+    item.result.cashGross += 10;
+    item.result.settlement.unusedLeaveGross += 10;
+    const valid = validatePayrollHandover(p),
+      files = payrollHandoverCsvs(valid),
+      rows = csvRows(files["payroll.csv"]);
+    assert.equal(
+      rows[1][16],
+      earned.toFixed(2).replace(".", locale === "ro" ? "," : "."),
+    );
+    assert.equal(rows[1][19], locale === "ro" ? "5,50" : "5.50");
+    assert.equal(rows[1][21], locale === "ro" ? "1386,38" : "1386.38");
+    assert.equal(rows[2][19], "");
+    assert.equal(rows[3][19], "");
+    const archive = unzipSync(
+      await buildPayrollHandoverArchive(p, "HRConnector"),
+    );
+    const manifest = JSON.parse(strFromU8(archive["manifest.json"]));
+    assert.deepEqual(manifest.employees[0].settlement, item.input.settlement);
+    assert.equal(
+      manifest.employees[0].settlement_amounts.unusedLeaveGross,
+      1386.38,
+    );
+    assert.match(strFromU8(archive["README.txt"]), /Format v3/);
+    for (const f of manifest.files)
+      assert.equal(
+        f.sha256,
+        createHash("sha256").update(archive[f.name]).digest("hex"),
+      );
+    await sample(
+      `settlement-handover-${locale}`,
+      archive["payroll-summary.pdf"],
+    );
+    const run = {
+        ...p.run,
+        organisation_id: p.organisation_id,
+        status: "approved",
+      },
+      snap = {
+        ...item,
+        run_id: p.run.id,
+        organisation_id: p.organisation_id,
+        source: {
+          company: p.company,
+          employee: {
+            name: item.employee_name,
+            email: "synthetic@example.test",
+            job: item.job_title,
+            department: item.department,
+            workplace: "Office",
+            start: "2026-01-01",
+          },
+        },
+      };
+    const bytes = await generateApprovedPayrollPdf(
+        run,
+        snap,
+        locale,
+        "HRConnector",
+      ),
+      pdf = await PDFDocument.load(bytes);
+    const text = pdf
+      .getPages()
+      .map((page) => pageText(pdf, page))
+      .join("\n");
+    assert.equal(pdf.getPageCount(), 1);
+    assert.match(text, /Tarif aprobat contabil/);
+    assert.match(text, /Sold final revizuit/);
+    assert.match(text, /RO-2026-monthly-v5/);
+    assert.match(
+      payslipBody(item.input, item.result, locale),
+      locale === "ro" ? /1\.386,38/ : /1,386\.38/,
+    );
+    await sample(`settlement-payslip-${locale}`, bytes);
+  }
+});
+
+test("settlement handover rejects missing facts, mixed format mismatch and invented old-version settlement", () => {
+  const p = fixture("en");
+  p.format_version = "HRConnector-accountant-v3";
+  const item = p.items[0];
+  item.input = payrollEntrySchema.parse({
+    ...item.input,
+    settlement: {
+      days: 2,
+      dailyGross: 250,
+      balanceReference: "Balance reviewed",
+      rateReference: "Rate approved",
+      otherGross: 0,
+      otherReference: "",
+      confirmed: "on",
+    },
+  });
+  item.result = calculatePayrollEntry(item.input);
+  validatePayrollHandover(p);
+  for (const modify of [
+    (q) => (q.format_version = "HRConnector-accountant-v2"),
+    (q) => delete q.items[0].input.settlement,
+    (q) => delete q.items[0].result.settlement,
+    (q) => (q.items[0].input.settlement.confirmed = ""),
+    (q) => (q.items[0].input.settlement.rateReference = ""),
+    (q) => (q.items[0].result.settlement.otherGross = 1),
+    (q) => (q.items[1].input.settlement = item.input.settlement),
+  ]) {
+    const q = structuredClone(p);
+    modify(q);
+    assert.throws(() => validatePayrollHandover(q));
+  }
+});
 function csvRows(text) {
   // These fixtures contain no multiline cells; quoted semicolons still need parsing.
   return text
